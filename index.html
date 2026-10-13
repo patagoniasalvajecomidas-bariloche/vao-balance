@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#103c34">
 <meta name="robots" content="noindex">
-<title>VAO BALANCE V1 STAGING</title>
+<title>SEBA BALANCE V1 STAGING</title>
 <style>
 :root{--verde:#103c34;--verde2:#15583f;--verde3:#1a8c64;--claro:#ebf5ef;--borde:#e2ebe5;--texto:#18372f;--gris:#6f857a;--fondo:#f4f7f5;--blanco:#fff;
   --ok:#0d8b58;--okf:#e5f6ed;--err:#c0392b;--errf:#fdecea;--warn:#8a5a00;--warnf:#fff4d6;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--texto)}
@@ -87,7 +87,7 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
 <div class="shell">
   <header class="top">
     <div class="logo">VAO</div>
-    <div class="marca"><b>VAO BALANCE</b><small id="ver-top"></small></div>
+    <div class="marca"><b>SEBA BALANCE</b><small id="ver-top"></small></div>
     <button class="pend" id="btn-pend" data-a="ir" data-p="pendientes">⏳ <span id="n-pend">0</span> pendiente</button>
     <button class="bug" id="btn-bug" data-a="reportar" aria-label="Reportar problema" style="display:none">🐞<span class="w"> Reportar</span></button>
   </header>
@@ -107,12 +107,12 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
 <script>
 'use strict';
 // =================================================================
-// VAO BALANCE V1 STAGING — frontend
+// SEBA BALANCE V1 STAGING — frontend
 // Sin catálogo, cuentas ni importes escritos acá: todo viene del backend (Google Sheets).
 // El acceso llega por un enlace personal (#k=CLAVE&api=URL) y queda guardado en este celular.
 // =================================================================
-const APP_VERSION = 2;
-const PRODUCTO = 'VAO BALANCE V1 STAGING';
+const APP_VERSION = 3;
+const PRODUCTO = 'SEBA BALANCE V1 STAGING';
 const K_ACCESO = 'vb_acceso_v1', K_COLA = 'vb_cola_v1', K_ULT_CTA = 'vb_ult_cuenta_v1';
 
 const $ = s => document.querySelector(s);
@@ -251,7 +251,7 @@ function atras() {
 window.addEventListener('popstate', () => {
   if (/k=[a-f0-9]{64}/.test(location.hash)) return;   // es el enlace de acceso (lo procesa 'hashchange'), no el botón Atrás
   if (atras()) { guarda(); return; }
-  const msg = cola.length ? 'Hay ' + cola.length + ' operación(es) pendiente(s) de verificación. ¿Salir igual de VAO BALANCE?' : '¿Salir de VAO BALANCE?';
+  const msg = cola.length ? 'Hay ' + cola.length + ' operación(es) pendiente(s) de verificación. ¿Salir igual de SEBA BALANCE?' : '¿Salir de SEBA BALANCE?';
   if (confirm(msg)) history.back(); else guarda();
 });
 window.addEventListener('beforeunload', e => { if (cola.length) { e.preventDefault(); e.returnValue = ''; } });
@@ -305,7 +305,7 @@ function render() {
 function vSinAcceso(msg) {
   return '<div class="eyebrow">ACCESO</div><h1>Necesitás tu enlace de acceso</h1>' +
     (msg ? '<div class="aviso a-err">' + esc(msg) + '</div>' : '') +
-    '<p class="sub">VAO BALANCE STAGING solo se abre con un enlace personal que genera el administrador. Abrí ese enlace en este celular una vez y queda guardado.</p>' +
+    '<p class="sub">SEBA BALANCE STAGING solo se abre con un enlace personal que genera el administrador. Abrí ese enlace en este celular una vez y queda guardado.</p>' +
     '<div class="aviso a-info">Si ya lo abriste antes y ves esto, el acceso pudo haber sido revocado: pedí uno nuevo.</div>' +
     (S.acc ? '<button class="btn sec2" data-a="olvidar">Borrar el acceso guardado en este celular</button>' : '');
 }
@@ -659,7 +659,7 @@ async function guardarReporte() {
 }
 async function copiarReporte() {
   const r = S.reporte;
-  const txt = '[VAO BALANCE · ' + r.tipo + ']\n' + r.texto + '\n— Pantalla: ' + r.pantalla + ' · app v' + APP_VERSION + ' · ' + new Date().toLocaleString('es-AR') + ' · ref ' + r.op_id;
+  const txt = '[SEBA BALANCE · ' + r.tipo + ']\n' + r.texto + '\n— Pantalla: ' + r.pantalla + ' · app v' + APP_VERSION + ' · ' + new Date().toLocaleString('es-AR') + ' · ref ' + r.op_id;
   try { await navigator.clipboard.writeText(txt); aviso('📋 Texto copiado. Podés pegarlo en WhatsApp.', 'info', 3000); }
   catch (e) {
     const t = $('#rep-txt'); t.value = txt; t.removeAttribute('readonly'); t.select();
