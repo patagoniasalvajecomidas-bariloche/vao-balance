@@ -1,122 +1,818 @@
 <!doctype html>
 <html lang="es-AR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#103c34">
-  <title>VAO BALANCE — Demo navegable</title>
-  <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#18372f;background:#f4f7f5;font-synthesis:none}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.48;cursor:not-allowed}input,select,textarea{width:100%;padding:13px 14px;border:1px solid #dce6e1;border-radius:13px;background:white;color:#18372f;outline:none}input:focus,textarea:focus,select:focus{border-color:#158669;box-shadow:0 0 0 3px #1586691a}textarea{resize:vertical;min-height:83px}a{color:#006e58}
-    .shell{max-width:560px;min-height:100vh;margin:0 auto;background:#f8faf8;box-shadow:0 0 80px #1a3e2d0c;padding-bottom:100px}.topbar{position:sticky;top:0;z-index:9;display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;background:#f8faf8ef;backdrop-filter:blur(15px);border-bottom:1px solid #e8eeea}.brand{display:flex;align-items:center;gap:10px}.brand-mark{display:grid;place-items:center;width:34px;height:34px;background:#103c34;color:#d9fce8;border-radius:11px;font-weight:900;letter-spacing:-1px;font-size:17px}.brand strong{font-size:15px;letter-spacing:.7px}.brand small{display:block;color:#688076;font-size:10px;letter-spacing:.5px}.profile-mini{border:1px solid #dce9df;border-radius:30px;background:white;color:#27584b;font-size:12px;padding:8px 10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.banner{padding:10px 20px;background:#fff6db;border-bottom:1px solid #efe5c5;color:#775a1e;font-size:11.5px;line-height:1.5}.content{padding:22px 20px}.eyebrow{font-size:11px;letter-spacing:1.1px;font-weight:800;color:#678279;text-transform:uppercase}.page-title{font-size:26px;letter-spacing:-.8px;margin:4px 0 8px;line-height:1.15}.muted{color:#72847b}.sub{font-size:13px;line-height:1.5}.hero{position:relative;overflow:hidden;color:white;background:linear-gradient(122deg,#113d33,#216a51);padding:23px;border-radius:24px;margin-top:22px;box-shadow:0 14px 24px #23674a19}.hero:after{content:'↗';position:absolute;font-weight:bold;right:-8px;top:-60px;color:#ffffff12;font-size:230px}.hero .small{color:#bbdbcc;font-size:12px}.hero .amount{font-size:35px;font-weight:800;letter-spacing:-1.2px;margin:8px 0 23px}.hero-bottom{display:flex;gap:12px;position:relative;z-index:1}.hero-stat{flex:1;padding:9px 10px;background:#ffffff17;border:1px solid #ffffff1a;border-radius:12px}.hero-stat span{display:block;font-size:10px;color:#bbdfcf;margin-bottom:4px}.hero-stat b{font-size:14px}.quickgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:20px 0 27px}.quickbtn{border:1px solid #e4ede7;border-radius:17px;padding:14px 5px 12px;background:white;display:flex;flex-direction:column;align-items:center;gap:9px;color:#233e34;box-shadow:0 4px 12px #1b49320b}.quickbtn .qi{font-size:20px;display:grid;place-items:center;width:41px;height:41px;border-radius:14px;background:#ebf5ef}.quickbtn span:last-child{font-size:11px;font-weight:750}.quickbtn:active,.tile:active{transform:scale(.97)}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 12px}.section-head h2{font-size:17px;margin:0;letter-spacing:-.3px}.textbtn{background:transparent;border:0;color:#146f55;font-size:12px;font-weight:750;padding:8px 0}.account-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.account{background:white;border:1px solid #e6ece8;border-radius:16px;padding:16px;min-width:0}.account .name{font-size:12px;color:#70877b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account .balance{font-weight:800;font-size:18px;letter-spacing:-.5px;margin:7px 0 0}.chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}.chip{padding:8px 12px;border:1px solid #dde8e0;border-radius:28px;background:white;color:#527567;font-weight:650;font-size:12px}.chip.active{background:#164d3d;color:white;border-color:#164d3d}.two-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.three-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;background:white;border:1px solid #e2ebe5;border-radius:17px;min-height:105px;padding:14px 8px;color:#1f4536}.tile .symbol{font-size:26px;line-height:1.1}.tile .tile-label{font-size:12px;line-height:1.2;font-weight:700;overflow-wrap:anywhere}.tile .freq{font-size:10px;color:#899f90}.tile .count{font-size:10px;color:#6a9b7f}.tile.special{border:1.5px dashed #8db8a5;background:#eff8f2;color:#21704f}.tile.selected{border:2px solid #1a8c64;background:#ebf7ef}.two-grid .tile{min-height:107px}.three-grid .tile{min-height:105px}.all-link{width:100%;padding:14px;text-align:center;border:1px solid #dbe7dc;border-radius:15px;background:white;color:#186d51;font-weight:800;font-size:13px;margin-top:10px}.search{position:relative;margin:13px 0}.search input{padding-left:42px}.search:before{content:'⌕';font-size:28px;position:absolute;left:14px;top:4px;color:#6b8376}.step{font-size:12px;color:#6b8575;font-weight:750;margin-bottom:9px}.back{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#2d6a4f;font-weight:700;padding:0;margin-bottom:18px}.formcard{border:1px solid #e2ebe6;border-radius:21px;background:white;padding:18px;margin-top:16px}.field{margin:0 0 16px}.field label{display:block;font-size:12px;font-weight:800;color:#355e4d;margin:0 0 7px}.field small{font-size:11px;color:#84978b}.bigamount{font-size:26px;font-weight:800}.primary{width:100%;border:0;background:#15583f;color:white;border-radius:15px;padding:15px 18px;font-weight:800;box-shadow:0 5px 14px #236a4423}.secondary{border:1px solid #cfded4;background:white;color:#205640;border-radius:14px;padding:12px 15px;font-weight:750}.warn{background:#fff8e5;border:1px solid #f0e1bb;border-radius:12px;padding:11px;color:#7c642c;font-size:12px;line-height:1.45}.info{background:#edf7f1;border:1px solid #d5eadc;border-radius:12px;padding:13px;color:#306451;font-size:12px;line-height:1.5}.empty{padding:28px 17px;border:1px dashed #cadbce;border-radius:16px;text-align:center;color:#789084;background:white;font-size:13px;line-height:1.6}.mov{display:flex;align-items:center;gap:11px;padding:14px 0;border-bottom:1px solid #edf1ed}.mov .bubble{width:41px;height:41px;border-radius:13px;display:grid;place-items:center;background:#edf5ef;font-size:20px;flex-shrink:0}.mov .detail{flex:1;min-width:0}.mov .detail strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mov .detail small{font-size:11px;color:#7d9186}.mov .money{font-size:14px;font-weight:850;white-space:nowrap}.positive{color:#0d8b58}.negative{color:#3a5041}.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;z-index:12;background:#fffefefa;backdrop-filter:blur(10px);padding:10px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e3e9e4;display:flex;justify-content:space-around}.navbtn{border:0;background:transparent;color:#88998f;font-size:10px;font-weight:700;display:flex;flex-direction:column;gap:4px;align-items:center;min-width:58px}.navbtn .nicon{font-size:22px}.navbtn.active{color:#17684e}.dialog{border:0;padding:0;border-radius:24px;width:min(92%,480px);max-height:85vh;overflow:auto;box-shadow:0 25px 100px #072c2290}.dialog::backdrop{background:#0d2c2399;backdrop-filter:blur(3px)}.modal-inside{padding:23px}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}.modal-head h2{margin:0;font-size:20px}.x{border:0;background:#eef5ef;border-radius:12px;width:34px;height:34px;font-size:18px;color:#2b6047}.profile-option{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:15px;margin:10px 0;border:1px solid #dae7dc;border-radius:16px;background:white;color:#1e4331}.profile-option .em{font-size:29px}.profile-option b{display:block;font-size:14px}.profile-option small{display:block;color:#778f7e;margin-top:4px}.listrow{display:flex;align-items:center;gap:12px;border-bottom:1px solid #edf1ec;padding:13px 0}.listrow .grow{flex:1}.mini-btn{border:1px solid #dbe7db;border-radius:10px;background:#fff;color:#287054;padding:7px 10px;font-weight:750;font-size:12px}.pills{display:flex;gap:8px;flex-wrap:wrap}.pills .pill{background:#eaf5ed;color:#37735a;border-radius:30px;font-size:11px;font-weight:750;padding:6px 9px}.note{font-size:11px;color:#809287;line-height:1.6;margin:12px 0}.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:80;width:min(90%,460px);background:#173f32;color:white;box-shadow:0 10px 40px #174e3066;padding:13px 17px;border-radius:13px;font-size:13px;display:none}.toast.show{display:block}.period{font-size:12px;color:#607c6a}.focus{font-weight:800;color:#0c684d}.welcome{margin-top:20px;padding:14px;background:#eaf6ec;border-radius:17px;font-size:13px;color:#375d49;line-height:1.5}
-    @media(max-width:380px){.content{padding:18px 14px}.topbar{padding:14px}.quickgrid{gap:5px}.quickbtn{padding:10px 2px}.quickbtn span:last-child{font-size:10px}.hero .amount{font-size:31px}.three-grid{gap:7px}.tile{padding:10px 5px;min-height:95px}.tile .tile-label{font-size:11px}}@media(min-width:561px){body{background:#e8eee9;padding:24px 0}.shell{border-radius:20px;overflow:hidden;min-height:calc(100vh - 48px)}.bottom{bottom:0}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#103c34">
+<meta name="robots" content="noindex">
+<title>VAO BALANCE V1 STAGING</title>
+<style>
+:root{--verde:#103c34;--verde2:#15583f;--verde3:#1a8c64;--claro:#ebf5ef;--borde:#e2ebe5;--texto:#18372f;--gris:#6f857a;--fondo:#f4f7f5;--blanco:#fff;
+  --ok:#0d8b58;--okf:#e5f6ed;--err:#c0392b;--errf:#fdecea;--warn:#8a5a00;--warnf:#fff4d6;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--texto)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--fondo);overscroll-behavior-y:contain}body{min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{width:100%;padding:13px 14px;border:1px solid #d5e2da;border-radius:13px;background:#fff;outline:none;font-size:16px}
+input:focus,select:focus,textarea:focus{border-color:var(--verde3);box-shadow:0 0 0 3px #1a8c6420}textarea{min-height:76px;resize:vertical}
+.shell{max-width:560px;margin:0 auto;min-height:100vh;background:#f8faf8;padding-bottom:96px;position:relative}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f8faf8f2;backdrop-filter:blur(12px);border-bottom:1px solid #e8eeea}
+.logo{width:34px;height:34px;border-radius:11px;background:var(--verde);color:#d9fce8;display:grid;place-items:center;font-weight:900;font-size:13px;flex-shrink:0}
+.marca{flex:1;min-width:0}.marca b{display:block;font-size:14px;letter-spacing:.5px}.marca small{font-size:10.5px;color:var(--gris)}
+.pend{border:1px solid #f0d58a;background:var(--warnf);color:var(--warn);border-radius:20px;padding:6px 10px;font-size:12px;font-weight:700;display:none}.pend.ver{display:inline-block}
+.env{background:#fff2c2;color:#6b4e00;font-size:11.5px;font-weight:700;text-align:center;padding:6px 12px;border-bottom:1px solid #eedc9b;letter-spacing:.3px}
+main{padding:18px 16px}
+.eyebrow{font-size:11px;letter-spacing:1px;font-weight:800;color:#678279;text-transform:uppercase}
+h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font-size:16px;margin:0}
+.sub{font-size:13px;color:var(--gris);line-height:1.5;margin:0}
+.hero{color:#fff;background:linear-gradient(125deg,#113d33,#216a51);padding:20px;border-radius:22px;margin-top:14px}
+.hero small{color:#bfe0d0;font-size:12px}.hero .monto{font-size:32px;font-weight:800;letter-spacing:-1px;margin:6px 0 16px;overflow-wrap:anywhere}
+.hero-row{display:flex;gap:10px}.hero-row div{flex:1;min-width:0;padding:9px 10px;background:#ffffff17;border:1px solid #ffffff1c;border-radius:12px}
+.hero-row span{display:block;font-size:10.5px;color:#c4e3d4;margin-bottom:3px}.hero-row b{font-size:14px;overflow-wrap:anywhere}
+.acciones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0 6px}
+.acc{border:1px solid var(--borde);border-radius:17px;padding:13px 4px 11px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:7px;box-shadow:0 3px 10px #1b49320a}
+.acc .ic{font-size:21px;width:42px;height:42px;border-radius:14px;background:var(--claro);display:grid;place-items:center}.acc span:last-child{font-size:12px;font-weight:750}
+.acc.gasto .ic{background:#fdeeee}.acc.ingreso .ic{background:#e5f6ed}
+.acc:active,.tile:active,.btn:active{transform:scale(.97)}
+.sec{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:22px 0 10px}
+.link{background:none;border:0;color:#146f55;font-weight:750;font-size:13px;padding:6px 0}
+.cuentas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cta{background:#fff;border:1px solid var(--borde);border-radius:15px;padding:13px;min-width:0}
+.cta .n{font-size:12px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cta .s{font-weight:800;font-size:17px;margin-top:5px;overflow-wrap:anywhere}
+.neg{color:var(--err)!important}.pos{color:var(--ok)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;background:#fff;border:1px solid var(--borde);border-radius:17px;min-height:100px;padding:12px 6px}
+.tile .e{font-size:26px;line-height:1}.tile .l{font-size:12.5px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.tile .u{font-size:10px;color:#6a9b7f}.tile .p{font-size:10.5px;color:var(--gris)}
+.tile.mas{border:1.5px dashed #8db8a5;background:#eff8f2;color:#21704f}.tile.sel{border:2px solid var(--verde3);background:var(--claro)}
+.tile.off{opacity:.45}
+.vertodo{width:100%;margin-top:10px;padding:13px;border:1px solid #d8e6dc;border-radius:14px;background:#fff;color:#186d51;font-weight:800;font-size:13px}
+.buscar{position:relative;margin:12px 0}.buscar input{padding-left:40px}.buscar:before{content:'🔎';position:absolute;left:13px;top:12px;font-size:16px}
+.paso{font-size:12px;color:#5f7a6c;font-weight:750;margin-bottom:6px}
+.volver{background:none;border:0;color:#2d6a4f;font-weight:750;padding:4px 0;margin-bottom:12px;font-size:14px}
+.card{background:#fff;border:1px solid var(--borde);border-radius:19px;padding:16px;margin-top:12px}
+.campo{margin:0 0 14px}.campo label{display:block;font-size:12.5px;font-weight:800;color:#355e4d;margin-bottom:6px}.campo small{display:block;font-size:11.5px;color:var(--gris);margin-top:5px}
+.importe{font-size:28px!important;font-weight:800;letter-spacing:-.5px}
+.btn{width:100%;border:0;border-radius:15px;padding:15px 18px;font-weight:800;font-size:15px;background:var(--verde2);color:#fff;box-shadow:0 5px 14px #236a4425}
+.btn.sec2{background:#fff;color:#205640;border:1px solid #cfded4;box-shadow:none}.btn.rojo{background:var(--err)}.btn.chico{width:auto;padding:9px 13px;font-size:13px;border-radius:12px}
+.fila-btn{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.chip{padding:8px 12px;border:1px solid #dde8e0;border-radius:24px;background:#fff;color:#527567;font-weight:700;font-size:12.5px}.chip.on{background:#164d3d;color:#fff;border-color:#164d3d}
+.pill{display:inline-block;border-radius:20px;font-size:11px;font-weight:800;padding:4px 9px}
+.p-ok{background:var(--okf);color:var(--ok)}.p-err{background:var(--errf);color:var(--err)}.p-warn{background:var(--warnf);color:var(--warn)}.p-gris{background:#eef1ef;color:#5c6e64}
+.mov{display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid #edf1ed;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.mov .b{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:#edf5ef;font-size:19px;flex-shrink:0}
+.mov .d{flex:1;min-width:0}.mov .d strong{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mov .d small{display:block;font-size:11.5px;color:#7d9186;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mov .m{font-size:14px;font-weight:850;white-space:nowrap}.mov.anul{opacity:.5}.mov.anul .m{text-decoration:line-through}
+.vacio{padding:24px 16px;border:1px dashed #cadbce;border-radius:16px;text-align:center;color:#789084;background:#fff;font-size:13px;line-height:1.6}
+.aviso{border-radius:13px;padding:12px;font-size:12.5px;line-height:1.5;margin:10px 0}.a-warn{background:var(--warnf);color:var(--warn);border:1px solid #f0dca0}.a-info{background:#edf7f1;color:#306451;border:1px solid #d5eadc}.a-err{background:var(--errf);color:var(--err);border:1px solid #f3c4bd}
+.cargando{padding:40px 10px;text-align:center;color:var(--gris)}.spin{width:28px;height:28px;border:3px solid #cfe3d7;border-top-color:var(--verde3);border-radius:50%;animation:g 0.8s linear infinite;margin:0 auto 10px}@keyframes g{to{transform:rotate(360deg)}}
+.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #edf1ec}.item .g{flex:1;min-width:0}.item .g b{display:block;font-size:14px;overflow-wrap:anywhere}.item .g small{color:var(--gris);font-size:12px}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;z-index:25;background:#fffffffa;backdrop-filter:blur(10px);border-top:1px solid #e3e9e4;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+.nav button{border:0;background:none;color:#88998f;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;padding:4px 0}.nav .i{font-size:20px}.nav button.on{color:#17684e}
+.velo{position:fixed;inset:0;background:#0d2c2399;z-index:50;display:none;align-items:flex-end;justify-content:center}.velo.ver{display:flex}
+.hoja{background:#fff;width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+.hoja-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.hoja-top h2{font-size:19px}.x{border:0;background:#eef5ef;border-radius:12px;width:36px;height:36px;font-size:18px}
+.resumen{background:var(--claro);border-radius:14px;padding:12px 14px;margin:8px 0 14px}.resumen div{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:13.5px}.resumen div span:first-child{color:var(--gris)}.resumen div span:last-child{font-weight:700;text-align:right;overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:80;pointer-events:none;width:min(88%,420px);padding:15px 17px;border-radius:15px;font-size:14px;font-weight:650;line-height:1.45;display:none;box-shadow:0 12px 40px #0b2a2055;text-align:center}
+.toast.ver{display:block}.t-ok{background:#0f6b45;color:#fff}.t-error{background:#b3261e;color:#fff}.t-warn{background:#fff4d6;color:#6b4500;border:1px solid #e9c66b}.t-info{background:#173f32;color:#fff}
+.mes{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--borde);border-radius:14px;padding:6px;margin:10px 0}.mes button{border:0;background:var(--claro);border-radius:10px;width:40px;height:36px;font-size:18px}.mes b{font-size:15px}
+.toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:650}.toggle input{width:22px;height:22px}
+.ver-badge{font-size:10px;color:#94a69b;text-align:center;margin-top:24px}
+@media(max-width:360px){main{padding:14px 12px}.grid3{gap:7px}.tile{min-height:92px;padding:10px 4px}.tile .l{font-size:11.5px}.hero .monto{font-size:27px}.acc span:last-child{font-size:11px}}
+</style>
 </head>
 <body>
 <div class="shell">
-  <header class="topbar"><div class="brand"><div class="brand-mark">VAO</div><div><strong>VAO BALANCE</strong><small>TU DINERO, A TU MANERA</small></div></div><button class="profile-mini" id="profile-switch" title="Cambiar perfil de prueba">Elegir perfil ▾</button></header>
-  <div class="banner">🧪 <b>DEMO LOCAL:</b> los datos de prueba quedan únicamente en este navegador. No hay conexión con Google Sheets ni dinero real.</div>
-  <main class="content" id="app" aria-live="polite"></main>
-  <nav class="bottom" aria-label="Navegación principal"><button class="navbtn active" data-nav="inicio"><span class="nicon">⌂</span>Inicio</button><button class="navbtn" data-nav="movimientos"><span class="nicon">≡</span>Historial</button><button class="navbtn" data-nav="catalogo"><span class="nicon">▦</span>Catálogo</button><button class="navbtn" data-nav="ajustes"><span class="nicon">⚙</span>Ajustes</button></nav>
+  <header class="top">
+    <div class="logo">VAO</div>
+    <div class="marca"><b>VAO BALANCE</b><small id="ver-top"></small></div>
+    <button class="pend" id="btn-pend" data-a="ir" data-p="pendientes">⏳ <span id="n-pend">0</span> pendiente</button>
+  </header>
+  <div class="env">🧪 STAGING · DEMO — datos de prueba, no dinero real</div>
+  <main id="app"><div class="cargando"><div class="spin"></div>Cargando…</div></main>
+  <nav class="nav" id="nav">
+    <button data-tab="inicio" class="on"><span class="i">⌂</span>Inicio</button>
+    <button data-tab="historial"><span class="i">≡</span>Historial</button>
+    <button data-tab="deudas"><span class="i">⚖</span>Deudas</button>
+    <button data-tab="compromisos"><span class="i">🗓</span>Compromisos</button>
+    <button data-tab="ajustes"><span class="i">⚙</span>Ajustes</button>
+  </nav>
 </div>
-<dialog class="dialog" id="modal"><div class="modal-inside" id="modal-body"></div></dialog>
+<div class="velo" id="velo"><div class="hoja" id="hoja" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" role="status"></div>
-<script src="catalogo.js"></script>
 <script>
 'use strict';
+// =================================================================
+// VAO BALANCE V1 STAGING — frontend
+// Sin catálogo, cuentas ni importes escritos acá: todo viene del backend (Google Sheets).
+// El acceso llega por un enlace personal (#k=CLAVE&api=URL) y queda guardado en este celular.
+// =================================================================
+const APP_VERSION = 1;
+const PRODUCTO = 'VAO BALANCE V1 STAGING';
+const K_ACCESO = 'vb_acceso_v1', K_COLA = 'vb_cola_v1', K_ULT_CTA = 'vb_ult_cuenta_v1';
+
 const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const html = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:2}).format(Number(n)||0);
-const today = () => {const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
-const uid = () => (crypto && crypto.randomUUID ? crypto.randomUUID() : 'op-'+Date.now()+'-'+Math.random().toString(36).slice(2));
-const CAT = window.VAO_CATALOGO;
-const app = $('#app');const modal = $('#modal');let store,perfil;
-let page='inicio',flow=null,showAll=false,searchTerm='',catalogSearch='',movFilter='TODOS',showAllCategories=false;
-const storageKey = id => 'vao_balance_demo_v1_'+id;
-function readProfile(id){
-  const p=CAT.perfiles.find(x=>x.id===id);if(!p) return null;
-  let saved=null;try{saved=JSON.parse(localStorage.getItem(storageKey(id)));}catch{}
-  return saved && Array.isArray(saved.categorias) && Array.isArray(saved.movimientos) ? saved : {categorias:structuredClone(p.categorias),conceptos:structuredClone(p.conceptos),cuentas:structuredClone(p.cuentas),movimientos:[]};
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt$ = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n) || 0);
+const fFecha = s => s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : (s || '');
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const fMes = p => p ? MESES[Number(p.slice(5, 7)) - 1] + ' ' + p.slice(0, 4) : '';
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function nuevoOpId() {
+  const r = (crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '') : (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
+  return 'op-' + r.slice(0, 32);
 }
-function persist(){localStorage.setItem(storageKey(perfil.id),JSON.stringify(store));}
-function setProfile(id){let p=CAT.perfiles.find(p=>p.id===id);if(!p)return;perfil=p;store=readProfile(id);localStorage.setItem('vao_balance_demo_profile',id);flow=null;page='inicio';hideModal();render();}
-function openModal(markup){$('#modal-body').innerHTML=markup;modal.showModal();}
-function hideModal(){if(modal.open)modal.close();}
-function modalTitle(title){return `<div class="modal-head"><h2>${title}</h2><button class="x" data-action="close-modal" aria-label="Cerrar">×</button></div>`;}
-function chooseProfile(){openModal(modalTitle('¿Cómo vas a usarlo?')+`<p class="sub muted">Elegí un perfil de ejemplo. Cada uno tiene su catálogo y datos de prueba separados.</p>`+CAT.perfiles.map(p=>`<button class="profile-option" data-action="select-profile" data-id="${html(p.id)}"><span class="em">${html(p.emoji)}</span><span><b>${html(p.nombre)}</b><small>${html(p.descripcion)}</small></span><span style="margin-left:auto">→</span></button>`).join('')+`<p class="note">Podés cambiarlo cuando quieras. El perfil no limita las funciones.</p>`);}
-function nav(p){flow=null;page=p;render();window.scrollTo({top:0,behavior:'instant'});}
-function getCats(tipo){return store.categorias.filter(c=>c.tipo===tipo && c.activo!==false).sort((a,b)=>(a.orden??99)-(b.orden??99));}
-function getConcepts(cid){return store.conceptos.filter(c=>c.categoriaId===cid && c.activo!==false);}
-function category(cid){return store.categorias.find(c=>c.id===cid);}
-function concept(id){return store.conceptos.find(c=>c.id===id);}
-function account(id){return store.cuentas.find(c=>c.id===id);}
-function frequency(cid){return store.movimientos.filter(m=>m.estado==='ACTIVO' && m.conceptoId===cid).length;}
-function rankedConcepts(cid){return getConcepts(cid).sort((a,b)=>frequency(b.id)-frequency(a.id)||a.orden-b.orden);}
-function categoryFrequency(cid){return store.movimientos.filter(m=>m.estado==='ACTIVO' && m.categoriaId===cid).length;}
-function rankedCats(tipo){return getCats(tipo).sort((a,b)=>categoryFrequency(b.id)-categoryFrequency(a.id)||a.orden-b.orden);}
-function saldoCuenta(cid){const c=account(cid);if(!c)return 0;let value=Number(c.saldoInicial)||0;for(const m of store.movimientos){if(m.estado!=='ACTIVO')continue;if(m.tipo==='INGRESO'&&m.cuentaId===cid)value+=m.importe;else if(m.tipo==='GASTO'&&m.cuentaId===cid)value-=m.importe;else if(m.tipo==='TRANSFERENCIA'){if(m.cuentaId===cid)value-=m.importe;if(m.destinoId===cid)value+=m.importe;}}return value;}
-function totalesMes(){const mes=today().slice(0,7);const mm=store.movimientos.filter(m=>m.estado==='ACTIVO'&&m.fecha.slice(0,7)===mes);return {ing: mm.filter(m=>m.tipo==='INGRESO').reduce((s,m)=>s+m.importe,0),gas:mm.filter(m=>m.tipo==='GASTO').reduce((s,m)=>s+m.importe,0)};}
-function flowStart(tipo){flow={tipo,etapa:'categoria',categoriaId:null,conceptoId:null};page='carga';showAll=false;searchTerm='';render();window.scrollTo({top:0,behavior:'instant'});}
-function render(){if(!perfil){chooseProfile();return;}$('#profile-switch').textContent=perfil.emoji+' '+perfil.nombre+' ▾';$$('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===page || (page==='carga' && b.dataset.nav==='inicio')));
-  if(page==='inicio')app.innerHTML=renderHome();else if(page==='carga')app.innerHTML=renderFlow();else if(page==='movimientos')app.innerHTML=renderHistory();else if(page==='catalogo')app.innerHTML=renderCatalog();else if(page==='ajustes')app.innerHTML=renderSettings();else if(page==='transferencia')app.innerHTML=renderTransfer();else if(page==='deudas')app.innerHTML=renderDebt();
+function leerImporte(txt) {
+  let s = String(txt || '').trim().replace(/\$|\s/g, '');
+  if (!s) return NaN;
+  if (s.indexOf(',') !== -1) s = s.replace(/\./g, '').replace(',', '.');
+  else if ((s.match(/\./g) || []).length > 1 || /^\d{1,3}\.\d{3}$/.test(s)) s = s.replace(/\./g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  return Math.round(Number(s) * 100) / 100;
 }
-function renderHome(){const t=totalesMes(),balance=store.cuentas.reduce((s,c)=>s+saldoCuenta(c.id),0);const recent=[...store.movimientos].filter(m=>m.estado==='ACTIVO').reverse().slice(0,3);
-return `<div class="eyebrow">TU ESPACIO FINANCIERO</div><h1 class="page-title">Todo bajo control.</h1><p class="sub muted" style="margin:0">Elegí una operación y registrala en pocos toques.</p><section class="hero"><div class="small">Saldo total de prueba</div><div class="amount">${money(balance)}</div><div class="hero-bottom"><div class="hero-stat"><span>↑ Ingresos del mes</span><b>${money(t.ing)}</b></div><div class="hero-stat"><span>↓ Gastos del mes</span><b>${money(t.gas)}</b></div></div></section>
-<div class="quickgrid"><button class="quickbtn" data-action="start" data-type="GASTO"><span class="qi">↗</span><span>+ Gasto</span></button><button class="quickbtn" data-action="start" data-type="INGRESO"><span class="qi">↙</span><span>+ Ingreso</span></button><button class="quickbtn" data-action="transfer"><span class="qi">⇄</span><span>Transferir</span></button><button class="quickbtn" data-action="deudas"><span class="qi">◎</span><span>Deudas</span></button></div>
-<div class="section-head"><h2>Mis cuentas</h2><button class="textbtn" data-action="new-account">+ Agregar</button></div><div class="account-row">${store.cuentas.length?store.cuentas.map(c=>`<div class="account"><div class="name">💳 ${html(c.nombre)}</div><div class="balance">${money(saldoCuenta(c.id))}</div></div>`).join(''):'<div class="empty">Todavía no tenés cuentas.</div>'}</div>
-<div class="section-head"><h2>Últimos movimientos</h2><button class="textbtn" data-nav="movimientos">Ver historial →</button></div>${recent.length?recent.map(renderMovement).join(''):'<div class="empty">Todavía no registraste operaciones.<br>Probá agregando un gasto o ingreso de demostración.</div>'}
-<div class="welcome">✨ <b>Tu catálogo se adapta a vos.</b> Las tarjetas más utilizadas suben al TOP 6. Las demás siguen disponibles en «Ver todos».</div>`;
+const importeTxt = n => (n == null || n === '') ? '' : String(n).replace('.', ',');
+
+// ---------------- Estado ----------------
+const S = { acc: null, est: null, error: null, pila: [], hist: { lista: null, filtros: { desde: '', hasta: '', cuenta_id: '', tipo: '', estado: '' } }, compPeriodo: null, compData: null };
+
+// ---------------- Acceso ----------------
+function leerAcceso() {
+  const h = location.hash || '';
+  const m = h.match(/k=([a-f0-9]{64})/), a = h.match(/api=([^&]+)/);
+  if (m && a) {
+    const api = decodeURIComponent(a[1]);
+    if (/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec$/.test(api)) ls.set(K_ACCESO, { k: m[1], api: api });
+    history.replaceState(null, '', location.pathname + location.search);   // borra la clave de la barra de direcciones
+  }
+  S.acc = ls.get(K_ACCESO, null);
 }
-function tileCategory(c){return `<button class="tile" data-action="choose-category" data-id="${html(c.id)}"><span class="symbol">${html(c.emoji||'📁')}</span><span class="tile-label">${html(c.nombre)}</span></button>`;}
-function tileConcept(c){let count=frequency(c.id);return `<button class="tile" data-action="choose-concept" data-id="${html(c.id)}"><span class="symbol">${html(category(c.categoriaId)?.emoji||'•')}</span><span class="tile-label">${html(c.nombre)}</span>${count?`<span class="count">Usado ${count} ${count===1?'vez':'veces'}</span>`:''}</button>`;}
-function renderFlow(){if(!flow)return '';const isGas=flow.tipo==='GASTO',subject=isGas?'Gasto':'Ingreso';let out=`<button class="back" data-action="flow-back">← Volver</button><div class="eyebrow">NUEVO ${subject.toUpperCase()}</div>`;
-if(flow.etapa==='categoria') {let cats=rankedCats(flow.tipo);let visible=showAllCategories?cats:cats.slice(0,6);out+=`<h1 class="page-title">¿En qué categoría?</h1><p class="sub muted">Elegí una tarjeta. Las más usadas aparecen primero.</p><div class="three-grid">${visible.map(tileCategory).join('')}<button class="tile special" data-action="new-category" data-type="${flow.tipo}"><span class="symbol">＋</span><span class="tile-label">Nueva categoría</span></button></div>${cats.length>6?`<button class="all-link" data-action="toggle-categories">${showAllCategories?'Mostrar TOP 6':'Ver todas las categorías ('+cats.length+')'}</button>`:''}`;}
-else if(flow.etapa==='concepto') {let cat=category(flow.categoriaId),items=rankedConcepts(cat.id);let results=searchTerm?items.filter(c=>c.nombre.toLowerCase().includes(searchTerm.toLowerCase())):(showAll?items:items.slice(0,6));out+=`<div class="step">${html(cat.emoji)} ${html(cat.nombre)} · Paso 2 de 3</div><h1 class="page-title">¿Qué ${isGas?'pagaste':'cobraste'}?</h1><div class="search"><input id="concept-search" type="search" placeholder="Buscar concepto..." value="${html(searchTerm)}" autocomplete="off"></div><div id="concept-results"><div class="two-grid">${results.map(tileConcept).join('')}${!searchTerm?`<button class="tile special" data-action="new-concept" data-id="${html(cat.id)}"><span class="symbol">＋</span><span class="tile-label">Nuevo concepto</span></button>`:''}</div>${results.length===0?'<div class="empty">No se encontraron conceptos.</div>':''}${!searchTerm&&items.length>6?`<button class="all-link" data-action="toggle-concepts">${showAll?'Mostrar TOP 6':'Ver todos los conceptos ('+items.length+')'}</button>`:''}</div>`;}
-else {let cat=category(flow.categoriaId),con=concept(flow.conceptoId);out+=`<div class="step">${html(cat.nombre)} › ${html(con.nombre)} · Paso 3 de 3</div><h1 class="page-title">Importe y detalle</h1><div class="pills"><span class="pill">${html(cat.emoji)} ${html(cat.nombre)}</span><span class="pill">${html(con.nombre)}</span></div><form id="transaction-form" class="formcard"><div class="field"><label for="amount">Importe ($)</label><input class="bigamount" id="amount" name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0" value="${con.importeSugerido??''}" required></div><div class="field"><label for="description">Descripción libre (opcional)</label><textarea id="description" name="description" placeholder="Ej.: Nafta para el auto, fotocopias, farmacia..."></textarea></div><div class="field"><label for="date">Fecha de la operación</label><input type="date" id="date" name="date" value="${today()}" required></div><div class="field"><label for="account">${isGas?'¿De qué cuenta sale?':'¿A qué cuenta ingresa?'}</label><select name="account" id="account" required>${store.cuentas.map(c=>`<option value="${html(c.id)}">${html(c.nombre)} · ${money(saldoCuenta(c.id))}</option>`).join('')}</select></div><p class="warn">🧪 Esto registra solamente una operación de prueba en este navegador. No se envía a Google Sheets.</p><button type="submit" class="primary">Registrar ${subject.toLowerCase()} de prueba</button></form>`;}
-return out;}
-function renderMovement(m){const isTransfer=m.tipo==='TRANSFERENCIA',isIncome=m.tipo==='INGRESO';let label=isTransfer?'Transferencia':m.conceptoNombre||'Movimiento';let details=isTransfer?`${html(account(m.cuentaId)?.nombre||'Cuenta')} → ${html(account(m.destinoId)?.nombre||'Cuenta')}`:`${html(m.categoriaNombre||m.tipo)} · ${html(account(m.cuentaId)?.nombre||'Cuenta')}`;return `<div class="mov"><div class="bubble">${isTransfer?'⇄':html(category(m.categoriaId)?.emoji||(isIncome?'💵':'🧾'))}</div><div class="detail"><strong>${html(label)}</strong><small>${details} · ${html(m.fecha)}</small>${m.descripcion?`<small style="display:block">${html(m.descripcion)}</small>`:''}</div><div class="money ${isIncome?'positive':'negative'}">${isIncome?'+':m.tipo==='GASTO'?'-':''}${money(m.importe)}</div></div>`;}
-function renderHistory(){let all=[...store.movimientos].reverse();let active=all.filter(m=>movFilter==='TODOS'||m.estado===movFilter);return `<div class="eyebrow">TU HISTORIAL</div><h1 class="page-title">Movimientos</h1><p class="sub muted">Solo se muestran operaciones guardadas en este navegador.</p><div class="chips"><button class="chip ${movFilter==='TODOS'?'active':''}" data-action="filter-mov" data-id="TODOS">Todos</button><button class="chip ${movFilter==='ACTIVO'?'active':''}" data-action="filter-mov" data-id="ACTIVO">Activos</button><button class="chip ${movFilter==='ANULADO'?'active':''}" data-action="filter-mov" data-id="ANULADO">Anulados</button></div>${active.length?active.map(m=>`<div>${renderMovement(m)}<div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;margin-top:-2px;padding-bottom:8px">${m.estado==='ACTIVO'?`<button class="textbtn" data-action="anular" data-id="${html(m.id)}">Anular prueba</button>`:'<span class="period">Anulado</span>'}</div></div>`).join(''):'<div class="empty">No hay movimientos para mostrar.</div>'}`;}
-function renderCatalog(){let cats=[...store.categorias].filter(c=>c.activo!==false).sort((a,b)=>a.tipo.localeCompare(b.tipo)||a.orden-b.orden);return `<div class="eyebrow">TODO SE PUEDE PERSONALIZAR</div><h1 class="page-title">Mi catálogo</h1><p class="sub muted">Los conceptos iniciales vienen del archivo de datos. Los que agregues quedan en tu demo local.</p><div class="chips"><button class="secondary" data-action="new-category">＋ Categoría</button><button class="secondary" data-action="new-concept">＋ Concepto</button></div><div class="search"><input id="catalog-search" type="search" placeholder="Buscar categoría o concepto..." value="${html(catalogSearch)}"></div><div id="catalog-results">${catalogRows(cats)}</div>`;}
-function catalogRows(cats){let term=catalogSearch.trim().toLowerCase();return cats.map(cat=>{let concepts=getConcepts(cat.id).filter(c=>!term||cat.nombre.toLowerCase().includes(term)||c.nombre.toLowerCase().includes(term));if(term&&!concepts.length&&!cat.nombre.toLowerCase().includes(term))return '';return `<div class="formcard" style="margin:12px 0"><div class="section-head" style="margin:0 0 8px"><h2 style="font-size:15px">${html(cat.emoji)} ${html(cat.nombre)} <span class="muted" style="font-size:11px">· ${cat.tipo==='GASTO'?'Gastos':'Ingresos'}</span></h2><button class="textbtn" data-action="new-concept" data-id="${html(cat.id)}">+ Agregar</button></div><div class="pills">${concepts.length?concepts.map(c=>`<span class="pill">${html(c.nombre)}</span>`).join(''):'<span class="note">Sin conceptos visibles</span>'}</div></div>`;}).join('')||'<div class="empty">Sin coincidencias.</div>';}
-function renderSettings(){return `<div class="eyebrow">CONFIGURACIÓN DEMO</div><h1 class="page-title">A tu manera.</h1><div class="formcard"><b>Perfil actual</b><div class="listrow"><span style="font-size:28px">${html(perfil.emoji)}</span><div class="grow"><b>${html(perfil.nombre)}</b><div class="sub muted">${html(perfil.descripcion)}</div></div></div><button class="secondary" data-action="choose-profile">Cambiar perfil</button></div><div class="formcard"><b>Cuentas disponibles</b>${store.cuentas.map(c=>`<div class="listrow"><span>💳</span><div class="grow"><b>${html(c.nombre)}</b><div class="sub muted">Saldo inicial de prueba: ${money(c.saldoInicial||0)}</div></div></div>`).join('')}<button class="secondary" data-action="new-account" style="margin-top:13px">＋ Agregar cuenta</button></div><div class="formcard"><b>Sobre esta versión</b><p class="sub muted">Todo lo que registrás es una demostración, guardada en el navegador de este dispositivo. No hay usuarios, contraseñas, GAS ni Google Sheets conectados.</p><button class="secondary" data-action="reset-demo">Borrar datos de prueba de este perfil</button></div>`;}
-function renderTransfer(){return `<button class="back" data-nav="inicio">← Inicio</button><div class="eyebrow">MOVER DINERO</div><h1 class="page-title">Transferir entre cuentas</h1><p class="sub muted">No cuenta como gasto ni ingreso; mueve un importe de una cuenta a otra.</p><form id="transfer-form" class="formcard"><div class="field"><label for="origin">Cuenta origen</label><select id="origin" name="origin" required>${store.cuentas.map(c=>`<option value="${html(c.id)}">${html(c.nombre)} · ${money(saldoCuenta(c.id))}</option>`).join('')}</select></div><div class="field"><label for="dest">Cuenta destino</label><select id="dest" name="dest" required>${store.cuentas.map((c,i)=>`<option value="${html(c.id)}" ${i===1?'selected':''}>${html(c.nombre)}</option>`).join('')}</select></div><div class="field"><label for="trans-amount">Importe ($)</label><input id="trans-amount" name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0" required></div><div class="field"><label for="trans-date">Fecha</label><input id="trans-date" name="date" type="date" value="${today()}" required></div><div class="field"><label for="trans-description">Detalle (opcional)</label><input id="trans-description" name="description" placeholder="Ej.: efectivo al banco"></div><p class="warn">🧪 Transferencia de prueba. No mueve dinero real.</p><button type="submit" class="primary" ${store.cuentas.length<2?'disabled':''}>Registrar transferencia de prueba</button></form>${store.cuentas.length<2?'<p class="sub muted">Agregá otra cuenta para probar transferencias.</p>':''}`;}
-function renderDebt(){return `<button class="back" data-nav="inicio">← Inicio</button><div class="eyebrow">PRÓXIMA ETAPA</div><h1 class="page-title">Deudas y cuotas</h1><div class="formcard"><div style="font-size:38px">🧾</div><h2 style="font-size:19px;margin-bottom:7px">Preparado para la segunda entrega</h2><p class="sub muted">Acá administraremos deudas que debés y dinero que te deben, pagos parciales y compromisos mensuales, sin duplicar gastos ni ingresos.</p><div class="info">Esta pantalla está identificada como pendiente para no simular que la función ya está desarrollada.</div></div><button class="primary" data-nav="inicio" style="margin-top:16px">Volver al inicio</button>`;}
-function formNewCategory(tipo){openModal(modalTitle('Nueva categoría')+`<form id="category-form"><div class="field"><label>Nombre</label><input name="nombre" maxlength="35" placeholder="Ej.: Mascotas" required></div><div class="field"><label>Tipo</label><select name="tipo"><option value="GASTO" ${tipo==='GASTO'?'selected':''}>Gasto</option><option value="INGRESO" ${tipo==='INGRESO'?'selected':''}>Ingreso</option></select></div><div class="field"><label>Emoji (opcional)</label><input name="emoji" maxlength="8" placeholder="📦"></div><button class="primary" type="submit">Guardar categoría de prueba</button></form>`);}
-function formNewConcept(cid){const cats=store.categorias.filter(c=>c.activo!==false),select=cats.map(c=>`<option value="${html(c.id)}" ${c.id===cid?'selected':''}>${html(c.nombre)} (${c.tipo})</option>`).join('');openModal(modalTitle('Nuevo concepto')+`<form id="concept-form"><div class="field"><label>Categoría</label><select name="categoriaId" required>${select}</select></div><div class="field"><label>Nombre</label><input name="nombre" maxlength="45" placeholder="Ej.: Estacionamiento" required></div><div class="field"><label>Importe sugerido (opcional)</label><input name="importe" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Se podrá editar al registrar"></div><button class="primary" type="submit">Guardar concepto de prueba</button></form>`);}
-function formNewAccount(){openModal(modalTitle('Nueva cuenta')+`<form id="account-form"><div class="field"><label>Nombre</label><input name="nombre" maxlength="40" placeholder="Ej.: Banco, efectivo, billetera" required></div><div class="field"><label>Tipo</label><select name="tipo"><option value="EFECTIVO">Efectivo</option><option value="BANCO">Banco</option><option value="BILLETERA">Billetera virtual</option><option value="OTRA">Otra</option></select></div><div class="field"><label>Saldo inicial de demostración</label><input name="saldo" type="number" inputmode="decimal" step="0.01" value="0" required></div><button class="primary" type="submit">Agregar cuenta de prueba</button></form>`);}
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),3300);}
-function confirmReset(){openModal(modalTitle('¿Borrar estos datos?')+`<p class="sub">Se eliminarán los movimientos y categorías creadas en la demo de <b>${html(perfil.nombre)}</b> en este navegador. Los demás perfiles no se borran.</p><button class="primary" data-action="confirm-reset">Sí, borrar datos de este perfil</button><button class="secondary" data-action="close-modal" style="width:100%;margin-top:10px">Cancelar</button>`);}
-function confirmCancel(id){const m=store.movimientos.find(m=>m.id===id);if(!m||m.estado==='ANULADO')return;openModal(modalTitle('Anular movimiento')+`<p class="sub">Se marcará como <b>ANULADO</b> el movimiento de ${money(m.importe)} y dejará de contar en los saldos y el TOP.</p><div class="field"><label>Motivo (opcional)</label><input id="cancel-reason" placeholder="Ej.: carga equivocada"></div><button class="primary" data-action="confirm-anular" data-id="${html(id)}">Confirmar anulación de prueba</button>`);}
-// Acciones delegadas: el HTML no contiene conceptos, categorías ni cuentas fijas.
-document.addEventListener('click',ev=>{const el=ev.target.closest('[data-action],[data-nav]');if(!el)return;const d=el.dataset;
- if(d.nav){nav(d.nav);return;}
- switch(d.action){case 'select-profile':setProfile(d.id);break;case 'choose-profile':chooseProfile();break;case 'close-modal':hideModal();break;
- case 'start':flowStart(d.type);break;case 'choose-category':flow.categoriaId=d.id;flow.etapa='concepto';showAll=false;searchTerm='';render();break;
- case 'choose-concept':flow.conceptoId=d.id;flow.etapa='detalle';render();break;
- case 'flow-back':if(flow?.etapa==='detalle'){flow.etapa='concepto';render();}else if(flow?.etapa==='concepto'){flow.etapa='categoria';render();}else nav('inicio');break;
- case 'toggle-concepts':showAll=!showAll;render();break;case 'toggle-categories':showAllCategories=!showAllCategories;render();break;
- case 'new-category':formNewCategory(d.type);break;case 'new-concept':formNewConcept(d.id);break;case 'new-account':formNewAccount();break;
- case 'filter-mov':movFilter=d.id;render();break;case 'transfer':nav('transferencia');break;case 'deudas':nav('deudas');break;
- case 'reset-demo':confirmReset();break;case 'confirm-reset':localStorage.removeItem(storageKey(perfil.id));store=readProfile(perfil.id);persist();hideModal();nav('inicio');toast('Datos de prueba eliminados');break;
- case 'anular':confirmCancel(d.id);break;case 'confirm-anular':{let m=store.movimientos.find(m=>m.id===d.id);if(m&&m.estado==='ACTIVO'){m.estado='ANULADO';m.motivo=$('#cancel-reason')?.value.trim()||'';persist();hideModal();render();toast('Movimiento de prueba anulado');}break;}
- }
+
+// ---------------- API ----------------
+async function llamar(accion, datos, opId) {
+  if (!S.acc) throw { tipo: 'acceso', mensaje: 'Sin acceso' };
+  const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 35000);
+  let resp;
+  try {
+    resp = await fetch(S.acc.api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, cache: 'no-store', redirect: 'follow',
+      body: JSON.stringify({ accion: accion, clave: S.acc.k, op_id: opId || null, datos: datos || {} }), signal: ctrl.signal });
+  } catch (e) { throw { tipo: 'red', mensaje: 'Sin conexión con el servidor' }; }
+  finally { clearTimeout(to); }
+  if (!resp.ok) throw { tipo: 'red', mensaje: 'El servidor respondió ' + resp.status };
+  let j;
+  try { j = await resp.json(); } catch (e) { throw { tipo: 'red', mensaje: 'Respuesta no válida del servidor' }; }
+  return j;
+}
+
+// ---------------- Cola de operaciones (reintentos seguros) ----------------
+let cola = ls.get(K_COLA, []);
+const colaGuardar = () => { ls.set(K_COLA, cola); pintarPend(); };
+const colaQuitar = id => { cola = cola.filter(o => o.op_id !== id); colaGuardar(); };
+function pintarPend() {
+  const b = $('#btn-pend'); $('#n-pend').textContent = cola.length;
+  b.childNodes[2].textContent = cola.length === 1 ? ' pendiente' : ' pendientes';
+  b.classList.toggle('ver', cola.length > 0);
+}
+const ERR_DUDOSOS = ['OCUPADO', 'CLAVE_INVALIDA', 'ERROR_INTERNO'];
+async function enviar(accion, datos, etiqueta) {
+  const op = { op_id: nuevoOpId(), accion: accion, datos: datos, etiqueta: etiqueta, creado: Date.now(), intentos: 0, ultimoError: '' };
+  cola.push(op); colaGuardar();
+  return procesar(op, true);
+}
+async function procesar(op, interactivo) {
+  op.intentos++; colaGuardar();
+  let j;
+  try { j = await llamar(op.accion, op.datos, op.op_id); }
+  catch (e) {
+    op.ultimoError = e.mensaje || 'sin conexión'; colaGuardar();
+    if (interactivo) aviso('⏳ El servidor no confirmó «' + op.etiqueta + '». Quedó PENDIENTE DE VERIFICACIÓN. No lo cargues de nuevo: se reintenta solo y sin duplicar.', 'warn', 8000);
+    return { estado: 'pendiente' };
+  }
+  if (j.ok) {
+    colaQuitar(op.op_id);
+    if (interactivo) aviso(j.duplicado ? 'ℹ️ Ya estaba guardado. No se duplicó.' : '✅ Guardado: ' + op.etiqueta, j.duplicado ? 'info' : 'ok');
+    return { estado: 'ok', j: j };
+  }
+  if (ERR_DUDOSOS.indexOf(j.error) !== -1) {
+    op.ultimoError = j.mensaje; colaGuardar();
+    if (interactivo) aviso('⏳ ' + j.mensaje + ' Quedó PENDIENTE: no lo cargues de nuevo.', 'warn', 8000);
+    if (j.error === 'CLAVE_INVALIDA') { S.error = j; }
+    return { estado: 'pendiente' };
+  }
+  colaQuitar(op.op_id);
+  if (interactivo) aviso('❌ No se guardó: ' + j.mensaje, 'error', 6500);
+  return { estado: 'rechazado', j: j };
+}
+let reintentando = false;
+async function reintentarCola() {
+  if (reintentando || !cola.length || !S.acc) return;
+  reintentando = true; let alguno = false;
+  for (const op of cola.slice()) { const r = await procesar(op, false); if (r.estado === 'ok') alguno = true; if (r.estado === 'pendiente') break; }
+  reintentando = false;
+  if (alguno) { aviso('✅ Se confirmaron operaciones pendientes', 'ok'); await cargarEstado(); }
+  else if (pantalla().p === 'pendientes') render();
+}
+
+// ---------------- Avisos y hoja inferior ----------------
+function aviso(msg, tipo, ms) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast ver t-' + (tipo || 'info');
+  clearTimeout(aviso.tm); aviso.tm = setTimeout(() => t.className = 'toast', ms || 2600);
+}
+$('#toast').addEventListener('click', () => $('#toast').className = 'toast');
+function abrirHoja(titulo, html) {
+  $('#hoja').innerHTML = '<div class="hoja-top"><h2>' + esc(titulo) + '</h2><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>' + html;
+  $('#velo').classList.add('ver');
+}
+const hojaAbierta = () => $('#velo').classList.contains('ver');
+function cerrarHoja() { if (!hojaAbierta()) return; $('#velo').classList.remove('ver'); $('#hoja').innerHTML = ''; }
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') cerrarHoja(); });
+
+// ---------------- Navegación (botón atrás del celular incluido) ----------------
+const pantalla = () => S.pila[S.pila.length - 1] || { p: 'inicio' };
+// El historial del navegador tiene siempre una sola "guarda": el botón/gesto Atrás del celular
+// hace un paso atrás DENTRO de la app y solo en Inicio pregunta antes de salir.
+function guarda() { history.pushState({ vb: 1 }, ''); }
+function ir(p, params) { S.pila.push(Object.assign({ p: p }, params || {})); render(); window.scrollTo(0, 0); }
+function tab(p) { S.pila = [{ p: 'inicio' }]; if (p !== 'inicio') S.pila.push({ p: p }); render(); window.scrollTo(0, 0); }
+function atras() {
+  if (hojaAbierta()) { cerrarHoja(); return true; }
+  if (S.pila.length > 1) { S.pila.pop(); render(); window.scrollTo(0, 0); return true; }
+  return false;
+}
+window.addEventListener('popstate', () => {
+  if (/k=[a-f0-9]{64}/.test(location.hash)) return;   // es el enlace de acceso (lo procesa 'hashchange'), no el botón Atrás
+  if (atras()) { guarda(); return; }
+  const msg = cola.length ? 'Hay ' + cola.length + ' operación(es) pendiente(s) de verificación. ¿Salir igual de VAO BALANCE?' : '¿Salir de VAO BALANCE?';
+  if (confirm(msg)) history.back(); else guarda();
 });
-document.addEventListener('input',ev=>{
- if(ev.target.id==='concept-search'){searchTerm=ev.target.value;const at=$('#concept-results');let items=rankedConcepts(flow.categoriaId),results=items.filter(c=>c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));at.innerHTML=`<div class="two-grid">${results.map(tileConcept).join('')}</div>${results.length?'':'<div class="empty">No se encontraron conceptos.</div>'}`;}
- if(ev.target.id==='catalog-search'){catalogSearch=ev.target.value;$('#catalog-results').innerHTML=catalogRows(store.categorias.filter(c=>c.activo!==false).sort((a,b)=>a.tipo.localeCompare(b.tipo)||a.orden-b.orden));}
+window.addEventListener('beforeunload', e => { if (cola.length) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------------- Carga de datos ----------------
+async function cargarEstado() {
+  try {
+    const j = await llamar('estado', {});
+    if (!j.ok) { S.error = j; } else { S.est = j; S.error = null; }
+  } catch (e) { S.error = { error: 'RED', mensaje: e.mensaje || 'Sin conexión' }; }
+  render();
+}
+
+// ---------------- Datos derivados ----------------
+const E = () => S.est;
+const cuentasAct = () => E().cuentas.filter(c => c.activo);
+const cuenta = id => E().cuentas.find(c => c.id === id);
+const cat = id => E().categorias.find(c => c.id === id);
+const con = id => E().conceptos.find(c => c.id === id);
+const porUso = (a, b) => (b.uso - a.uso) || (a.orden - b.orden) || a.nombre.localeCompare(b.nombre, 'es');
+const catsTipo = tipo => E().categorias.filter(c => c.activo && c.tipo === tipo).sort(porUso);
+const consCat = id => E().conceptos.filter(c => c.activo && c.categoria_id === id).sort(porUso);
+const TOP = () => Number((E().config || {}).top_cantidad) || 6;
+const ICONO_TIPO = { INGRESO: '↙', EGRESO: '↗', TRANSFERENCIA: '⇄', DEUDA_ALTA: '⚖', PAGO_DEUDA: '⚖' };
+const NOMBRE_TIPO = { INGRESO: 'Ingreso', EGRESO: 'Gasto', TRANSFERENCIA: 'Transferencia', DEUDA_ALTA: 'Alta de deuda', PAGO_DEUDA: 'Pago/cobro de deuda' };
+
+// ---------------- Render principal ----------------
+function render() {
+  $('#ver-top').textContent = 'V1 STAGING · app ' + APP_VERSION + (S.est ? ' · backend ' + S.est.build : '');
+  const p = pantalla();
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === (S.pila[1] ? S.pila[1].p : 'inicio') || (b.dataset.tab === 'inicio' && S.pila.length === 1)));
+  const app = $('#app');
+  if (!S.acc) { app.innerHTML = vSinAcceso(); return; }
+  if (p.p === 'pendientes') { app.innerHTML = vPendientes(); return; }
+  if (S.error && S.error.error === 'CLAVE_INVALIDA') { app.innerHTML = vSinAcceso(S.error.mensaje); return; }
+  if (!S.est) {
+    app.innerHTML = S.error ? '<div class="aviso a-err"><b>No se pudo cargar.</b><br>' + esc(S.error.mensaje) + '</div><button class="btn" data-a="recargar">Reintentar</button>' : '<div class="cargando"><div class="spin"></div>Cargando datos de la planilla…</div>';
+    return;
+  }
+  if (!E().perfil && E().perfiles.length) { app.innerHTML = vElegirPerfil(); return; }
+  const banner = S.error ? '<div class="aviso a-err">⚠️ ' + esc(S.error.mensaje) + ' · Se muestran los últimos datos cargados. <button class="link" data-a="recargar">Reintentar</button></div>' : '';
+  const V = { inicio: vInicio, carga: vCarga, transferir: vTransferir, historial: vHistorial, deudas: vDeudas, deudaNueva: vDeudaNueva, deudaPagar: vDeudaPagar,
+    compromisos: vCompromisos, ajustes: vAjustes, categoria: vCategoria };
+  app.innerHTML = banner + (V[p.p] || vInicio)(p) + '<div class="ver-badge">' + esc(PRODUCTO) + ' · app v' + APP_VERSION + ' · backend build ' + esc(E().build) + '</div>';
+  if (p.p === 'historial' && S.hist.lista === null) cargarHistorial();
+  if (p.p === 'compromisos' && (!S.compData || S.compData.periodo !== (S.compPeriodo || E().mes.periodo))) cargarCompromisos();
+}
+
+function vSinAcceso(msg) {
+  return '<div class="eyebrow">ACCESO</div><h1>Necesitás tu enlace de acceso</h1>' +
+    (msg ? '<div class="aviso a-err">' + esc(msg) + '</div>' : '') +
+    '<p class="sub">VAO BALANCE STAGING solo se abre con un enlace personal que genera el administrador. Abrí ese enlace en este celular una vez y queda guardado.</p>' +
+    '<div class="aviso a-info">Si ya lo abriste antes y ves esto, el acceso pudo haber sido revocado: pedí uno nuevo.</div>' +
+    (S.acc ? '<button class="btn sec2" data-a="olvidar">Borrar el acceso guardado en este celular</button>' : '');
+}
+
+function vElegirPerfil() {
+  return '<div class="eyebrow">PRIMER PASO</div><h1>¿Cómo vas a usarlo?</h1><p class="sub">Elegí un perfil. Su catálogo inicial se copia a TU planilla y después lo podés cambiar todo.</p>' +
+    E().perfiles.map(p => '<button class="card item" style="width:100%;text-align:left" data-a="elegirPerfil" data-id="' + esc(p.id) + '"><span style="font-size:30px">' + esc(p.emoji) + '</span><span class="g"><b>' + esc(p.nombre) + '</b><small>' + esc(p.descripcion) + '</small></span><span>→</span></button>').join('');
+}
+
+function vInicio() {
+  const e = E();
+  const pendComp = (e.compromisosMes || []).filter(c => c.estado !== 'PAGADO');
+  const deudasAbiertas = e.deudas.filter(d => d.estado === 'PENDIENTE' || d.estado === 'PARCIAL');
+  return '<div class="eyebrow">' + esc(e.perfil ? e.perfil.emoji + ' ' + e.perfil.nombre : '') + ' · ' + esc(e.usuario.nombre) + '</div>' +
+    '<section class="hero"><small>Saldo total</small><div class="monto' + (e.total < 0 ? ' neg' : '') + '">' + fmt$(e.total) + '</div>' +
+    '<div class="hero-row"><div><span>↙ Ingresos de ' + esc(MESES[Number(e.mes.periodo.slice(5)) - 1]) + '</span><b>' + fmt$(e.mes.ingresos) + '</b></div><div><span>↗ Gastos de ' + esc(MESES[Number(e.mes.periodo.slice(5)) - 1]) + '</span><b>' + fmt$(e.mes.gastos) + '</b></div></div></section>' +
+    '<div class="acciones">' +
+    '<button class="acc gasto" data-a="carga" data-tipo="EGRESO"><span class="ic">↗</span><span>+ Gasto</span></button>' +
+    '<button class="acc ingreso" data-a="carga" data-tipo="INGRESO"><span class="ic">↙</span><span>+ Ingreso</span></button>' +
+    '<button class="acc" data-a="ir" data-p="transferir"><span class="ic">⇄</span><span>Transferir</span></button>' +
+    '<button class="acc" data-tab="deudas"><span class="ic">⚖</span><span>Deudas</span></button>' +
+    '<button class="acc" data-tab="compromisos"><span class="ic">🗓</span><span>Compromisos</span></button>' +
+    '<button class="acc" data-tab="historial"><span class="ic">≡</span><span>Historial</span></button></div>' +
+    '<div class="sec"><h2>Mis cuentas</h2><button class="link" data-a="cuentaForm">+ Agregar</button></div>' +
+    '<div class="cuentas">' + (cuentasAct().length ? cuentasAct().map(c => '<div class="cta"><div class="n">' + esc(c.nombre) + '</div><div class="s' + (c.saldo < 0 ? ' neg' : '') + '">' + fmt$(c.saldo) + '</div></div>').join('') : '<div class="vacio">Sin cuentas activas</div>') + '</div>' +
+    '<div class="sec"><h2>Compromisos pendientes</h2><button class="link" data-tab="compromisos">Ver todos →</button></div>' +
+    (pendComp.length ? pendComp.slice(0, 4).map(c => filaCompromiso(c, true)).join('') : '<div class="vacio">' + ((e.compromisos || []).filter(c => c.activo).length ? 'Todo pagado este mes 🎉' : 'No cargaste compromisos todavía.') + '</div>') +
+    (deudasAbiertas.length ? '<div class="sec"><h2>Deudas abiertas</h2><button class="link" data-tab="deudas">Ver →</button></div>' + deudasAbiertas.slice(0, 3).map(d => '<div class="item"><span>' + (d.sentido === 'DEBO' ? '🔻' : '🔺') + '</span><div class="g"><b>' + esc(d.contraparte) + '</b><small>' + (d.sentido === 'DEBO' ? 'Debo' : 'Me debe') + ' · pendiente</small></div><b>' + fmt$(d.pendiente) + '</b></div>').join('') : '') +
+    '<div class="sec"><h2>Últimos movimientos</h2><button class="link" data-tab="historial">Historial →</button></div>' +
+    (e.ultimos.length ? e.ultimos.map(filaMov).join('') : '<div class="vacio">Todavía no hay movimientos.<br>Probá registrar un gasto o un ingreso.</div>');
+}
+
+function filaMov(m) {
+  const ingreso = m.tipo === 'INGRESO' || (m.tipo === 'DEUDA_ALTA' && deudaSentido(m.deuda_id) === 'DEBO') || (m.tipo === 'PAGO_DEUDA' && deudaSentido(m.deuda_id) === 'ME_DEBEN');
+  const neutro = m.tipo === 'TRANSFERENCIA';
+  const c = cat(m.categoria_id);
+  const det = m.tipo === 'TRANSFERENCIA' ? (nombreCta(m.cuenta_id) + ' → ' + nombreCta(m.cuenta_destino_id)) : ((m.categoria_nombre ? m.categoria_nombre + ' · ' : '') + nombreCta(m.cuenta_id));
+  return '<button class="mov' + (m.estado === 'ANULADO' ? ' anul' : '') + '" data-a="verMov" data-id="' + esc(m.id) + '"><span class="b">' + esc(c ? c.emoji : ICONO_TIPO[m.tipo] || '•') + '</span>' +
+    '<span class="d"><strong>' + esc(m.concepto_nombre || NOMBRE_TIPO[m.tipo]) + '</strong><small>' + esc(det) + ' · ' + fFecha(m.fecha_operacion) + '</small>' + (m.descripcion ? '<small>' + esc(m.descripcion) + '</small>' : '') + (m.estado === 'ANULADO' ? '<small class="neg">ANULADO</small>' : '') + '</span>' +
+    '<span class="m ' + (neutro ? '' : ingreso ? 'pos' : '') + '">' + (neutro ? '' : ingreso ? '+' : '−') + fmt$(m.importe) + '</span></button>';
+}
+const nombreCta = id => { const c = cuenta(id); return c ? c.nombre : '(cuenta)'; };
+const deudaSentido = id => { const d = E().deudas.find(x => x.id === id); return d ? d.sentido : ''; };
+
+// ---------------- Carga de gasto / ingreso ----------------
+function vCarga(p) {
+  const gasto = p.tipo === 'EGRESO', titulo = gasto ? 'GASTO' : 'INGRESO';
+  let h = '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">NUEVO ' + titulo + (p.compromiso_id ? ' · PAGO DE COMPROMISO' : '') + '</div>';
+  if (p.paso === 'cat') {
+    const cats = catsTipo(p.tipo), vis = p.todas ? cats : cats.slice(0, TOP());
+    h += '<h1>¿En qué categoría?</h1><p class="sub">Las más usadas aparecen primero.</p><div class="grid3" style="margin-top:12px">' +
+      vis.map(c => '<button class="tile" data-a="elegirCat" data-id="' + esc(c.id) + '"><span class="e">' + esc(c.emoji || '📁') + '</span><span class="l">' + esc(c.nombre) + '</span>' + (c.uso ? '<span class="u">' + c.uso + ' uso' + (c.uso > 1 ? 's' : '') + '</span>' : '') + '</button>').join('') +
+      '<button class="tile mas" data-a="nuevaCat" data-tipo="' + p.tipo + '"><span class="e">＋</span><span class="l">Nueva categoría</span></button></div>' +
+      (cats.length > TOP() ? '<button class="vertodo" data-a="verTodasCat">' + (p.todas ? 'Mostrar solo las ' + TOP() + ' principales' : 'Ver todas las categorías (' + cats.length + ')') + '</button>' : '') +
+      (!cats.length ? '<div class="vacio" style="margin-top:12px">No hay categorías de ' + titulo.toLowerCase() + '. Creá una con ＋.</div>' : '');
+  } else if (p.paso === 'con') {
+    const c = cat(p.catId), lista = consCat(p.catId);
+    const q = norm(p.q);
+    const filtrados = q ? lista.filter(x => norm(x.nombre).indexOf(q) !== -1) : (p.todos ? lista : lista.slice(0, TOP()));
+    h += '<div class="paso">' + esc(c.emoji) + ' ' + esc(c.nombre) + ' · paso 2 de 3</div><h1>¿Qué ' + (gasto ? 'pagaste' : 'cobraste') + '?</h1>' +
+      '<div class="buscar"><input id="q-con" type="search" placeholder="Buscar concepto…" value="' + esc(p.q || '') + '" autocomplete="off"></div>' +
+      '<div class="grid2" id="lista-con">' + tilesConceptos(filtrados, !q, p.catId) + '</div>' +
+      (q && !filtrados.length ? '<div class="vacio" style="margin-top:10px">Sin resultados para «' + esc(p.q) + '».</div>' : '') +
+      (!q && lista.length > TOP() ? '<button class="vertodo" data-a="verTodosCon">' + (p.todos ? 'Mostrar solo los ' + TOP() + ' principales' : 'Ver todos los conceptos (' + lista.length + ')') + '</button>' : '');
+  } else {
+    const c = cat(p.catId), k = con(p.conId);
+    const ctas = cuentasAct();
+    const ctaSel = p.cuenta_id || (k.cuenta_sugerida_id && cuenta(k.cuenta_sugerida_id) && cuenta(k.cuenta_sugerida_id).activo ? k.cuenta_sugerida_id : null) || (ls.get(K_ULT_CTA, null) && cuenta(ls.get(K_ULT_CTA)) && cuenta(ls.get(K_ULT_CTA)).activo ? ls.get(K_ULT_CTA) : (ctas[0] && ctas[0].id));
+    h += '<div class="paso">' + esc(c.nombre) + ' › ' + esc(k.nombre) + ' · paso 3 de 3</div><h1>Importe y detalle</h1>' +
+      (p.compromiso_id ? '<div class="aviso a-info">Pago del compromiso <b>' + esc(p.compNombre) + '</b> correspondiente a <b>' + esc(fMes(p.periodo)) + '</b>. La fecha de pago puede ser otra.</div>' : '') +
+      '<form id="f-mov" class="card" autocomplete="off">' +
+      '<div class="campo"><label for="imp">Importe ($)</label><input id="imp" class="importe" inputmode="decimal" placeholder="0,00" value="' + esc(p.importe != null ? p.importe : importeTxt(k.importe_sugerido)) + '" required><small id="imp-ver">' + (k.importe_sugerido != null ? 'Sugerido: ' + fmt$(k.importe_sugerido) + ' (editable)' : 'Escribí el importe. Ej: 1500 o 1.500,50') + '</small></div>' +
+      '<div class="campo"><label for="desc">Descripción (opcional)</label><textarea id="desc" maxlength="300" placeholder="Ej.: compra en farmacia del centro">' + esc(p.descripcion || '') + '</textarea></div>' +
+      '<div class="campo"><label for="fec">Fecha de la operación</label><input id="fec" type="date" value="' + esc(p.fecha || E().hoy) + '" required></div>' +
+      '<div class="campo"><label>' + (gasto ? '¿De qué cuenta salió?' : '¿A qué cuenta entró?') + '</label><div class="grid2" id="ctas">' +
+      (ctas.length ? ctas.map(x => '<button type="button" class="tile' + (x.id === ctaSel ? ' sel' : '') + '" style="min-height:70px" data-a="selCta" data-id="' + esc(x.id) + '"><span class="l">' + esc(x.nombre) + '</span><span class="p' + (x.saldo < 0 ? ' neg' : '') + '">' + fmt$(x.saldo) + '</span></button>').join('') : '<div class="vacio">No hay cuentas activas. Creá una en Ajustes.</div>') +
+      '</div><input type="hidden" id="cta" value="' + esc(ctaSel || '') + '"></div>' +
+      '<button class="btn" type="submit"' + (ctas.length ? '' : ' disabled') + '>Revisar y confirmar</button></form>';
+  }
+  return h;
+}
+function tilesConceptos(lista, conMas, catId) {
+  return lista.map(x => '<button class="tile" data-a="elegirCon" data-id="' + esc(x.id) + '"><span class="l">' + esc(x.nombre) + '</span>' + (x.importe_sugerido != null ? '<span class="p">' + fmt$(x.importe_sugerido) + '</span>' : '') + (x.uso ? '<span class="u">' + x.uso + ' uso' + (x.uso > 1 ? 's' : '') + '</span>' : '') + '</button>').join('') +
+    (conMas ? '<button class="tile mas" data-a="nuevoCon" data-id="' + esc(catId) + '"><span class="e">＋</span><span class="l">Nuevo concepto</span></button>' : '');
+}
+function confirmarMovimiento() {
+  const p = pantalla();
+  const imp = leerImporte($('#imp').value), fecha = $('#fec').value, ctaId = $('#cta').value, desc = $('#desc').value.trim();
+  p.importe = $('#imp').value; p.descripcion = desc; p.fecha = fecha; p.cuenta_id = ctaId;
+  if (!(imp > 0)) { aviso('Revisá el importe (mayor que 0, hasta 2 decimales)', 'error'); $('#imp').focus(); return; }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { aviso('Revisá la fecha', 'error'); return; }
+  if (!ctaId) { aviso('Elegí una cuenta', 'error'); return; }
+  const c = cat(p.catId), k = con(p.conId), gasto = p.tipo === 'EGRESO';
+  abrirHoja('Confirmar ' + (gasto ? 'gasto' : 'ingreso'),
+    '<div class="resumen"><div><span>Importe</span><span style="font-size:18px">' + fmt$(imp) + '</span></div><div><span>Categoría</span><span>' + esc(c.emoji + ' ' + c.nombre) + '</span></div><div><span>Concepto</span><span>' + esc(k.nombre) + '</span></div>' +
+    '<div><span>Cuenta</span><span>' + esc(nombreCta(ctaId)) + '</span></div><div><span>Fecha</span><span>' + fFecha(fecha) + '</span></div>' + (desc ? '<div><span>Descripción</span><span>' + esc(desc) + '</span></div>' : '') +
+    (p.compromiso_id ? '<div><span>Compromiso</span><span>' + esc(p.compNombre) + ' · ' + esc(fMes(p.periodo)) + '</span></div>' : '') + '</div>' +
+    '<button class="btn" data-a="registrarMov">Confirmar y registrar</button><button class="btn sec2" style="margin-top:8px" data-a="cerrar">Corregir</button>');
+  S.borrador = { tipo: p.tipo, concepto_id: p.conId, cuenta_id: ctaId, importe: imp, fecha: fecha, descripcion: desc, compromiso_id: p.compromiso_id || '', periodo: p.periodo || '', etiqueta: (gasto ? 'Gasto ' : 'Ingreso ') + k.nombre + ' ' + fmt$(imp) };
+}
+
+// ---------------- Transferir ----------------
+function vTransferir(p) {
+  const ctas = cuentasAct();
+  return '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">MOVER DINERO</div><h1>Transferir entre cuentas</h1><p class="sub">No es gasto ni ingreso: el dinero pasa de una cuenta a otra.</p>' +
+    (ctas.length < 2 ? '<div class="aviso a-warn">Necesitás al menos dos cuentas activas.</div>' : '') +
+    '<form id="f-tr" class="card"><div class="campo"><label for="t-o">Desde</label><select id="t-o">' + ctas.map(c => '<option value="' + esc(c.id) + '">' + esc(c.nombre) + ' · ' + fmt$(c.saldo) + '</option>').join('') + '</select></div>' +
+    '<div class="campo"><label for="t-d">Hacia</label><select id="t-d">' + ctas.map((c, i) => '<option value="' + esc(c.id) + '"' + (i === 1 ? ' selected' : '') + '>' + esc(c.nombre) + ' · ' + fmt$(c.saldo) + '</option>').join('') + '</select></div>' +
+    '<div class="campo"><label for="t-i">Importe ($)</label><input id="t-i" class="importe" inputmode="decimal" placeholder="0,00"></div>' +
+    '<div class="campo"><label for="t-f">Fecha</label><input id="t-f" type="date" value="' + esc(E().hoy) + '"></div>' +
+    '<div class="campo"><label for="t-x">Detalle (opcional)</label><input id="t-x" maxlength="300" placeholder="Ej.: retiro del cajero"></div>' +
+    '<button class="btn" type="submit"' + (ctas.length < 2 ? ' disabled' : '') + '>Revisar y confirmar</button></form>';
+}
+
+// ---------------- Historial ----------------
+async function cargarHistorial() {
+  S.hist.lista = 'cargando';
+  try { const j = await llamar('movimientos', Object.assign({ limite: 300 }, S.hist.filtros)); S.hist.lista = j.ok ? j : { error: j.mensaje }; }
+  catch (e) { S.hist.lista = { error: e.mensaje }; }
+  if (pantalla().p === 'historial') render();
+}
+function vHistorial() {
+  const f = S.hist.filtros, L = S.hist.lista;
+  const tipos = [['', 'Todos'], ['EGRESO', 'Gastos'], ['INGRESO', 'Ingresos'], ['TRANSFERENCIA', 'Transferencias'], ['PAGO_DEUDA', 'Pagos de deuda'], ['DEUDA_ALTA', 'Altas de deuda']];
+  let h = '<div class="eyebrow">HISTORIAL</div><h1>Movimientos</h1>' +
+    '<form id="f-hist" class="card" style="padding:12px"><div class="grid2"><div class="campo"><label>Desde</label><input type="date" id="h-d" value="' + esc(f.desde) + '"></div><div class="campo"><label>Hasta</label><input type="date" id="h-h" value="' + esc(f.hasta) + '"></div></div>' +
+    '<div class="grid2"><div class="campo"><label>Cuenta</label><select id="h-c"><option value="">Todas</option>' + E().cuentas.map(c => '<option value="' + esc(c.id) + '"' + (f.cuenta_id === c.id ? ' selected' : '') + '>' + esc(c.nombre) + '</option>').join('') + '</select></div>' +
+    '<div class="campo"><label>Tipo</label><select id="h-t">' + tipos.map(t => '<option value="' + t[0] + '"' + (f.tipo === t[0] ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select></div></div>' +
+    '<div class="chips" style="margin:0 0 10px">' + [['', 'Todos'], ['ACTIVO', 'Activos'], ['ANULADO', 'Anulados']].map(x => '<button type="button" class="chip' + (f.estado === x[0] ? ' on' : '') + '" data-a="hEstado" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>' +
+    '<div class="fila-btn" style="margin:0"><button class="btn chico" type="submit">Aplicar filtros</button><button class="btn chico sec2" type="button" data-a="hLimpiar">Limpiar</button></div></form>';
+  if (L === null || L === 'cargando') h += '<div class="cargando"><div class="spin"></div>Cargando…</div>';
+  else if (L.error) h += '<div class="aviso a-err">No se pudo cargar: ' + esc(L.error) + '</div><button class="btn sec2" data-a="hRecargar">Reintentar</button>';
+  else h += '<p class="sub" style="margin:12px 0 4px">' + L.total + ' movimiento' + (L.total === 1 ? '' : 's') + (L.recortado ? ' (se muestran los 300 más recientes)' : '') + '</p>' + (L.movimientos.length ? L.movimientos.map(filaMov).join('') : '<div class="vacio">No hay movimientos con esos filtros.</div>');
+  return h;
+}
+function verMov(id) {
+  const L = S.hist.lista && S.hist.lista.movimientos ? S.hist.lista.movimientos : [];
+  const m = L.concat(E().ultimos).find(x => x.id === id);
+  if (!m) return;
+  const filas = [['Tipo', NOMBRE_TIPO[m.tipo] || m.tipo], ['Importe', fmt$(m.importe)], ['Fecha', fFecha(m.fecha_operacion)],
+    ['Categoría', m.categoria_nombre], ['Concepto', m.concepto_nombre], ['Cuenta', nombreCta(m.cuenta_id)], ['Destino', m.cuenta_destino_id ? nombreCta(m.cuenta_destino_id) : ''],
+    ['Compromiso', m.compromiso_id ? ((E().compromisos.find(c => c.id === m.compromiso_id) || {}).nombre || '') + ' · ' + fMes(m.periodo) : ''],
+    ['Descripción', m.descripcion], ['Registrado', m.fecha_registro + ' · ' + m.usuario], ['Estado', m.estado],
+    ['Motivo anulación', m.motivo_anulacion], ['Anulado', m.fecha_anulacion ? m.fecha_anulacion + ' · ' + m.anulado_por : ''], ['ID', m.id]].filter(x => x[1]);
+  const puede = m.estado === 'ACTIVO' && m.tipo !== 'DEUDA_ALTA';
+  abrirHoja('Detalle', '<div class="resumen">' + filas.map(x => '<div><span>' + esc(x[0]) + '</span><span>' + esc(x[1]) + '</span></div>').join('') + '</div>' +
+    (puede ? '<div class="campo"><label for="mot">Motivo para anular</label><input id="mot" maxlength="200" placeholder="Ej.: lo cargué dos veces"></div><button class="btn rojo" data-a="anularMov" data-id="' + esc(m.id) + '">Anular movimiento</button><p class="sub" style="margin-top:8px">Anular no borra: queda en el historial como ANULADO y deja de contar en saldos.</p>'
+      : (m.tipo === 'DEUDA_ALTA' && m.estado === 'ACTIVO' ? '<div class="aviso a-info">Es el alta de una deuda: se anula desde la pantalla Deudas.</div>' : '')));
+}
+
+// ---------------- Deudas ----------------
+function vDeudas(p) {
+  const sentido = p.sentido || 'DEBO';
+  const lista = E().deudas.filter(d => d.sentido === sentido && (p.verCerradas || d.estado === 'PENDIENTE' || d.estado === 'PARCIAL'));
+  const tot = E().deudas.filter(d => d.sentido === sentido && d.estado !== 'ANULADA').reduce((s, d) => s + d.pendiente, 0);
+  return '<div class="eyebrow">DEUDAS</div><h1>' + (sentido === 'DEBO' ? 'Lo que debo' : 'Lo que me deben') + '</h1>' +
+    '<div class="chips"><button class="chip' + (sentido === 'DEBO' ? ' on' : '') + '" data-a="dSentido" data-v="DEBO">🔻 Debo</button><button class="chip' + (sentido === 'ME_DEBEN' ? ' on' : '') + '" data-a="dSentido" data-v="ME_DEBEN">🔺 Me deben</button>' +
+    '<button class="chip' + (p.verCerradas ? ' on' : '') + '" data-a="dCerradas">Ver saldadas/anuladas</button></div>' +
+    '<div class="card"><small class="sub">Total pendiente</small><div style="font-size:24px;font-weight:800">' + fmt$(tot) + '</div></div>' +
+    '<button class="btn" style="margin-top:12px" data-a="ir" data-p="deudaNueva" data-sentido="' + sentido + '">＋ Nueva deuda</button>' +
+    (lista.length ? lista.map(d => '<div class="card"><div class="item" style="border:0;padding:0"><div class="g"><b>' + esc(d.contraparte) + '</b><small>' + esc(d.descripcion || '') + (d.vencimiento ? ' · vence ' + fFecha(d.vencimiento) : '') + '</small></div>' + pillDeuda(d.estado) + '</div>' +
+      '<div class="resumen" style="margin:10px 0"><div><span>Original</span><span>' + fmt$(d.importe_original) + '</span></div><div><span>' + (d.sentido === 'DEBO' ? 'Pagado' : 'Cobrado') + ' (' + d.cantidad_pagos + ')</span><span>' + fmt$(d.pagado) + '</span></div><div><span>Pendiente</span><span style="font-size:16px">' + fmt$(d.pendiente) + '</span></div></div>' +
+      (d.estado === 'PENDIENTE' || d.estado === 'PARCIAL' ? '<div class="fila-btn"><button class="btn chico" data-a="ir" data-p="deudaPagar" data-id="' + esc(d.id) + '">' + (d.sentido === 'DEBO' ? 'Registrar pago' : 'Registrar cobro') + '</button>' + (d.cantidad_pagos ? '' : '<button class="btn chico sec2" data-a="anularDeuda" data-id="' + esc(d.id) + '">Anular</button>') + '</div>' : '') +
+      (d.estado === 'ANULADA' ? '<small class="sub">Motivo: ' + esc(d.motivo_anulacion) + '</small>' : '') + '</div>').join('')
+      : '<div class="vacio" style="margin-top:12px">No hay deudas ' + (p.verCerradas ? '' : 'abiertas ') + 'en esta lista.</div>') +
+    '<div class="aviso a-info" style="margin-top:14px">Las deudas y sus pagos mueven el saldo de las cuentas, pero <b>no se cuentan como gastos ni ingresos del mes</b>, para no contar dos veces lo mismo.</div>';
+}
+const pillDeuda = e => '<span class="pill ' + ({ PENDIENTE: 'p-warn', PARCIAL: 'p-warn', SALDADA: 'p-ok', ANULADA: 'p-gris' }[e] || 'p-gris') + '">' + esc(e) + '</span>';
+function vDeudaNueva(p) {
+  const s = p.sentido || 'DEBO', ctas = cuentasAct();
+  return '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">NUEVA DEUDA</div><h1>' + (s === 'DEBO' ? 'Debo dinero' : 'Me deben dinero') + '</h1>' +
+    '<div class="chips"><button class="chip' + (s === 'DEBO' ? ' on' : '') + '" data-a="dnSentido" data-v="DEBO">🔻 Debo</button><button class="chip' + (s === 'ME_DEBEN' ? ' on' : '') + '" data-a="dnSentido" data-v="ME_DEBEN">🔺 Me deben</button></div>' +
+    '<form id="f-deuda" class="card"><div class="campo"><label for="dn-c">' + (s === 'DEBO' ? '¿A quién le debés?' : '¿Quién te debe?') + '</label><input id="dn-c" maxlength="60" placeholder="Nombre"></div>' +
+    '<div class="campo"><label for="dn-i">Importe total ($)</label><input id="dn-i" class="importe" inputmode="decimal" placeholder="0,00"></div>' +
+    '<div class="campo"><label for="dn-x">Descripción (opcional)</label><input id="dn-x" maxlength="300" placeholder="Ej.: préstamo para el auto"></div>' +
+    '<div class="grid2"><div class="campo"><label for="dn-f">Fecha</label><input id="dn-f" type="date" value="' + esc(E().hoy) + '"></div><div class="campo"><label for="dn-v">Vence (opcional)</label><input id="dn-v" type="date"></div></div>' +
+    '<div class="campo"><label class="toggle"><input type="checkbox" id="dn-m"> ' + (s === 'DEBO' ? 'Recibí el dinero ahora (entra a una cuenta)' : 'Entregué el dinero ahora (sale de una cuenta)') + '</label>' +
+    '<select id="dn-cta" style="margin-top:8px">' + ctas.map(c => '<option value="' + esc(c.id) + '">' + esc(c.nombre) + '</option>').join('') + '</select><small>Si no se movió dinero (por ejemplo, una compra fiada), dejalo sin marcar.</small></div>' +
+    '<button class="btn" type="submit">Revisar y confirmar</button></form>';
+}
+function vDeudaPagar(p) {
+  const d = E().deudas.find(x => x.id === p.id);
+  if (!d) return '<button class="volver" data-a="atras">← Volver</button><div class="vacio">La deuda ya no está disponible.</div>';
+  const debo = d.sentido === 'DEBO';
+  return '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">' + (debo ? 'PAGO DE DEUDA' : 'COBRO DE DEUDA') + '</div><h1>' + esc(d.contraparte) + '</h1>' +
+    '<div class="resumen"><div><span>Pendiente</span><span style="font-size:17px">' + fmt$(d.pendiente) + '</span></div></div>' +
+    '<form id="f-pago" class="card"><div class="campo"><label for="pg-i">Importe ($)</label><input id="pg-i" class="importe" inputmode="decimal" value="' + esc(importeTxt(d.pendiente)) + '"><small>Podés pagar una parte. Máximo: ' + fmt$(d.pendiente) + '</small></div>' +
+    '<div class="campo"><label for="pg-c">' + (debo ? '¿De qué cuenta sale?' : '¿A qué cuenta entra?') + '</label><select id="pg-c">' + cuentasAct().map(c => '<option value="' + esc(c.id) + '">' + esc(c.nombre) + ' · ' + fmt$(c.saldo) + '</option>').join('') + '</select></div>' +
+    '<div class="campo"><label for="pg-f">Fecha</label><input id="pg-f" type="date" value="' + esc(E().hoy) + '"></div>' +
+    '<div class="campo"><label for="pg-x">Detalle (opcional)</label><input id="pg-x" maxlength="300"></div>' +
+    '<button class="btn" type="submit">Revisar y confirmar</button></form>';
+}
+
+// ---------------- Compromisos ----------------
+async function cargarCompromisos() {
+  const periodo = S.compPeriodo || E().mes.periodo;
+  S.compData = { periodo: periodo, cargando: true };
+  try { const j = await llamar('compromisosMes', { periodo: periodo }); S.compData = j.ok ? j : { periodo: periodo, error: j.mensaje }; }
+  catch (e) { S.compData = { periodo: periodo, error: e.mensaje }; }
+  if (pantalla().p === 'compromisos') render();
+}
+function filaCompromiso(c, corto) {
+  const pill = { PENDIENTE: 'p-warn', PARCIAL: 'p-warn', PAGADO: 'p-ok' }[c.estado];
+  const vencido = c.estado !== 'PAGADO' && c.vencimiento < E().hoy;
+  return '<div class="card" style="padding:13px"><div class="item" style="border:0;padding:0"><div class="g"><b>' + esc(c.nombre) + '</b><small>' + (vencido ? '<span class="neg">Venció</span>' : 'Vence') + ' ' + fFecha(c.vencimiento) + ' · ' + esc(fMes(c.periodo)) + '</small></div><span class="pill ' + pill + '">' + c.estado + '</span></div>' +
+    '<div class="resumen" style="margin:8px 0"><div><span>Estimado</span><span>' + (c.importe_estimado != null ? fmt$(c.importe_estimado) : '—') + '</span></div><div><span>Pagado</span><span>' + fmt$(c.pagado) + '</span></div></div>' +
+    (c.estado !== 'PAGADO' ? '<button class="btn chico" data-a="pagarComp" data-id="' + esc(c.id) + '" data-periodo="' + esc(c.periodo) + '">Registrar pago</button>' : '') + '</div>';
+}
+function vCompromisos() {
+  const periodo = S.compPeriodo || E().mes.periodo, D = S.compData;
+  let h = '<div class="eyebrow">COMPROMISOS MENSUALES</div><h1>Compromisos</h1><p class="sub">No descuentan dinero solos: el pago se registra cuando lo confirmás.</p>' +
+    '<div class="mes"><button data-a="mes" data-d="-1" aria-label="Mes anterior">‹</button><b>' + esc(fMes(periodo)) + '</b><button data-a="mes" data-d="1" aria-label="Mes siguiente">›</button></div>';
+  if (!D || D.cargando) h += '<div class="cargando"><div class="spin"></div>Cargando…</div>';
+  else if (D.error) h += '<div class="aviso a-err">' + esc(D.error) + '</div><button class="btn sec2" data-a="compRecargar">Reintentar</button>';
+  else h += D.compromisos.length ? D.compromisos.map(c => filaCompromiso(c)).join('') : '<div class="vacio">No hay compromisos activos.</div>';
+  h += '<div class="sec"><h2>Configurar</h2><button class="link" data-a="compForm">＋ Nuevo compromiso</button></div>' +
+    (E().compromisos.length ? E().compromisos.map(c => '<div class="item' + (c.activo ? '' : ' tile off') + '" style="' + (c.activo ? '' : 'opacity:.5') + '"><div class="g"><b>' + esc(c.nombre) + '</b><small>' + (c.importe_estimado != null ? fmt$(c.importe_estimado) : 'sin importe') + ' · día ' + esc(c.dia_vencimiento) + ' · ' + esc((con(c.concepto_id) || {}).nombre || '') + (c.activo ? '' : ' · desactivado') + '</small></div><button class="btn chico sec2" data-a="compForm" data-id="' + esc(c.id) + '">Editar</button></div>').join('') : '<p class="sub">Ejemplos: alquiler, servicios, streaming, cuotas.</p>');
+  return h;
+}
+function formCompromiso(id) {
+  const c = id ? E().compromisos.find(x => x.id === id) : null;
+  const opciones = catsTipo('EGRESO').map(ca => '<optgroup label="' + esc(ca.emoji + ' ' + ca.nombre) + '">' + consCat(ca.id).map(k => '<option value="' + esc(k.id) + '"' + (c && c.concepto_id === k.id ? ' selected' : '') + '>' + esc(k.nombre) + '</option>').join('') + '</optgroup>').join('');
+  abrirHoja(c ? 'Editar compromiso' : 'Nuevo compromiso', '<form id="f-comp" data-id="' + esc(id || '') + '">' +
+    '<div class="campo"><label>Nombre</label><input id="cp-n" maxlength="40" value="' + esc(c ? c.nombre : '') + '" placeholder="Ej.: Alquiler, Netflix, Luz"></div>' +
+    '<div class="campo"><label>Concepto de gasto</label><select id="cp-k">' + opciones + '</select><small>Se usa para clasificar el pago como gasto.</small></div>' +
+    '<div class="grid2"><div class="campo"><label>Importe estimado</label><input id="cp-i" inputmode="decimal" value="' + esc(c ? importeTxt(c.importe_estimado) : '') + '" placeholder="Opcional"></div><div class="campo"><label>Día de vencimiento</label><input id="cp-d" type="number" min="1" max="31" value="' + esc(c ? c.dia_vencimiento : 10) + '"></div></div>' +
+    '<div class="campo"><label>Cuenta sugerida</label><select id="cp-c"><option value="">Ninguna</option>' + cuentasAct().map(x => '<option value="' + esc(x.id) + '"' + (c && c.cuenta_sugerida_id === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>').join('') + '</select></div>' +
+    (c ? '<div class="campo"><label class="toggle"><input type="checkbox" id="cp-a"' + (c.activo ? ' checked' : '') + '> Activo</label></div>' : '') +
+    '<button class="btn" type="submit">Guardar</button></form>');
+}
+
+// ---------------- Ajustes ----------------
+function vAjustes() {
+  const e = E();
+  const bloqueCats = tipo => e.categorias.filter(c => c.tipo === tipo).sort((a, b) => (b.activo - a.activo) || (a.orden - b.orden)).map(c =>
+    '<button class="item" style="width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;' + (c.activo ? '' : 'opacity:.5') + '" data-a="ir" data-p="categoria" data-id="' + esc(c.id) + '"><span style="font-size:22px">' + esc(c.emoji || '📁') + '</span><span class="g"><b>' + esc(c.nombre) + '</b><small>' + e.conceptos.filter(k => k.categoria_id === c.id && k.activo).length + ' conceptos · orden ' + c.orden + (c.activo ? '' : ' · desactivada') + '</small></span><span>›</span></button>').join('');
+  return '<div class="eyebrow">CONFIGURACIÓN</div><h1>Ajustes</h1>' +
+    '<div class="card"><div class="sec" style="margin:0 0 6px"><h2>Cuentas</h2><button class="link" data-a="cuentaForm">＋ Cuenta</button></div>' +
+    e.cuentas.map(c => '<div class="item" style="' + (c.activo ? '' : 'opacity:.5') + '"><div class="g"><b>' + esc(c.nombre) + '</b><small>' + esc(c.tipo) + ' · saldo inicial ' + fmt$(c.saldo_inicial) + ' · saldo ' + fmt$(c.saldo) + (c.activo ? '' : ' · desactivada') + '</small></div><button class="btn chico sec2" data-a="cuentaForm" data-id="' + esc(c.id) + '">Editar</button></div>').join('') + '</div>' +
+    '<div class="card"><div class="sec" style="margin:0 0 6px"><h2>Categorías de gasto</h2><button class="link" data-a="nuevaCat" data-tipo="EGRESO">＋ Nueva</button></div>' + bloqueCats('EGRESO') + '</div>' +
+    '<div class="card"><div class="sec" style="margin:0 0 6px"><h2>Categorías de ingreso</h2><button class="link" data-a="nuevaCat" data-tipo="INGRESO">＋ Nueva</button></div>' + bloqueCats('INGRESO') + '</div>' +
+    '<div class="card"><h2>Compromisos</h2><p class="sub" style="margin:6px 0 10px">' + e.compromisos.filter(c => c.activo).length + ' activos.</p><button class="btn chico sec2" data-tab="compromisos">Configurar compromisos</button></div>' +
+    '<div class="card"><h2>Este celular</h2><div class="resumen" style="margin-top:10px"><div><span>Usuario</span><span>' + esc(e.usuario.nombre) + '</span></div><div><span>Perfil</span><span>' + esc(e.perfil ? e.perfil.nombre : '—') + '</span></div><div><span>Entorno</span><span>' + esc(e.entorno) + ' · ' + esc((e.config || {}).nombre_cliente || '') + '</span></div><div><span>Versión</span><span>app ' + APP_VERSION + ' · backend ' + esc(e.build) + '</span></div><div><span>Pendientes</span><span>' + cola.length + '</span></div></div>' +
+    '<div class="fila-btn"><button class="btn chico sec2" data-a="ir" data-p="pendientes">Ver pendientes</button><button class="btn chico sec2" data-a="recargar">Recargar datos</button><button class="btn chico sec2" data-a="olvidar">Cerrar acceso</button></div></div>';
+}
+function vCategoria(p) {
+  const c = cat(p.id);
+  if (!c) return '<button class="volver" data-a="atras">← Volver</button><div class="vacio">Categoría no encontrada</div>';
+  const cons = E().conceptos.filter(k => k.categoria_id === c.id).sort((a, b) => (b.activo - a.activo) || (a.orden - b.orden));
+  return '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">' + (c.tipo === 'EGRESO' ? 'CATEGORÍA DE GASTO' : 'CATEGORÍA DE INGRESO') + '</div><h1>' + esc(c.emoji + ' ' + c.nombre) + '</h1>' +
+    '<form id="f-cat" class="card" data-id="' + esc(c.id) + '"><div class="grid2"><div class="campo"><label>Nombre</label><input id="ca-n" maxlength="40" value="' + esc(c.nombre) + '"></div><div class="campo"><label>Emoji</label><input id="ca-e" maxlength="8" value="' + esc(c.emoji) + '"></div></div>' +
+    '<div class="grid2"><div class="campo"><label>Orden</label><input id="ca-o" type="number" value="' + esc(c.orden) + '"></div><div class="campo"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="ca-a"' + (c.activo ? ' checked' : '') + '> Activa</label></div></div>' +
+    '<button class="btn" type="submit">Guardar categoría</button></form>' +
+    '<div class="sec"><h2>Conceptos</h2><button class="link" data-a="nuevoCon" data-id="' + esc(c.id) + '">＋ Concepto</button></div>' +
+    (cons.length ? cons.map(k => '<div class="item" style="' + (k.activo ? '' : 'opacity:.5') + '"><div class="g"><b>' + esc(k.nombre) + '</b><small>orden ' + k.orden + (k.importe_sugerido != null ? ' · sugerido ' + fmt$(k.importe_sugerido) : '') + ' · ' + k.uso + ' usos' + (k.activo ? '' : ' · desactivado') + '</small></div><button class="btn chico sec2" data-a="conForm" data-id="' + esc(k.id) + '">Editar</button></div>').join('') : '<div class="vacio">Sin conceptos.</div>');
+}
+function formCuenta(id) {
+  const c = id ? cuenta(id) : null;
+  abrirHoja(c ? 'Editar cuenta' : 'Nueva cuenta', '<form id="f-cta" data-id="' + esc(id || '') + '">' +
+    '<div class="campo"><label>Nombre</label><input id="ct-n" maxlength="40" value="' + esc(c ? c.nombre : '') + '" placeholder="Ej.: Banco, Efectivo"></div>' +
+    '<div class="campo"><label>Tipo</label><select id="ct-t">' + [['EFECTIVO', 'Efectivo'], ['BANCO', 'Banco'], ['BILLETERA', 'Billetera virtual'], ['OTRA', 'Otra']].map(t => '<option value="' + t[0] + '"' + (c && c.tipo === t[0] ? ' selected' : '') + '>' + t[1] + '</option>').join('') + '</select></div>' +
+    '<div class="campo"><label>Saldo inicial de prueba ($)</label><input id="ct-s" inputmode="decimal" value="' + esc(c ? importeTxt(c.saldo_inicial) : '0') + '"><small>Puede ser negativo (ej.: -5000). El saldo actual se calcula sumando los movimientos.</small></div>' +
+    (c ? '<div class="campo"><label class="toggle"><input type="checkbox" id="ct-a"' + (c.activo ? ' checked' : '') + '> Activa</label></div>' : '') +
+    '<button class="btn" type="submit">Guardar</button></form>');
+}
+function formCategoria(tipo) {
+  abrirHoja('Nueva categoría', '<form id="f-ncat"><div class="campo"><label>Nombre</label><input id="nc-n" maxlength="40" placeholder="Ej.: Mascotas"></div>' +
+    '<div class="campo"><label>Tipo</label><select id="nc-t"><option value="EGRESO"' + (tipo === 'EGRESO' ? ' selected' : '') + '>Gasto</option><option value="INGRESO"' + (tipo === 'INGRESO' ? ' selected' : '') + '>Ingreso</option></select></div>' +
+    '<div class="campo"><label>Emoji (opcional)</label><input id="nc-e" maxlength="8" placeholder="🐶"></div><p class="sub">Solo agrega una opción al catálogo. No registra dinero.</p><button class="btn" type="submit" style="margin-top:10px">Guardar categoría</button></form>');
+}
+function formConcepto(catId, id) {
+  const k = id ? con(id) : null, c = cat(k ? k.categoria_id : catId);
+  abrirHoja(k ? 'Editar concepto' : 'Nuevo concepto en ' + (c ? c.nombre : ''), '<form id="f-con" data-id="' + esc(id || '') + '" data-cat="' + esc(c ? c.id : '') + '">' +
+    '<div class="campo"><label>Nombre</label><input id="cn-n" maxlength="45" value="' + esc(k ? k.nombre : '') + '" placeholder="Ej.: Veterinaria"></div>' +
+    '<div class="campo"><label>Importe sugerido (opcional)</label><input id="cn-i" inputmode="decimal" value="' + esc(k ? importeTxt(k.importe_sugerido) : '') + '"><small>Siempre se puede editar al registrar.</small></div>' +
+    (k ? '<div class="grid2"><div class="campo"><label>Orden</label><input id="cn-o" type="number" value="' + esc(k.orden) + '"></div><div class="campo"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="cn-a"' + (k.activo ? ' checked' : '') + '> Activo</label></div></div>' : '<p class="sub">Solo agrega una opción al catálogo. No registra dinero.</p>') +
+    '<button class="btn" type="submit" style="margin-top:10px">Guardar concepto</button></form>');
+}
+
+// ---------------- Pendientes ----------------
+function vPendientes() {
+  return '<button class="volver" data-a="atras">← Volver</button><div class="eyebrow">VERIFICACIÓN</div><h1>Operaciones pendientes</h1>' +
+    '<p class="sub">Son operaciones enviadas sin confirmación del servidor. Se reintentan solas con el mismo identificador, así que <b>no se duplican</b>. No las cargues de nuevo.</p>' +
+    (cola.length ? cola.map(o => '<div class="card"><b>' + esc(o.etiqueta) + '</b><div class="sub">Creada ' + new Date(o.creado).toLocaleString('es-AR') + ' · intentos ' + o.intentos + '</div>' + (o.ultimoError ? '<div class="aviso a-warn">' + esc(o.ultimoError) + '</div>' : '') +
+      '<div class="fila-btn"><button class="btn chico" data-a="pReintentar" data-id="' + esc(o.op_id) + '">Reintentar</button><button class="btn chico sec2" data-a="pVerificar" data-id="' + esc(o.op_id) + '">Verificar</button><button class="btn chico sec2" data-a="pDescartar" data-id="' + esc(o.op_id) + '">Descartar</button></div></div>').join('')
+      : '<div class="vacio" style="margin-top:14px">No hay operaciones pendientes. ✅</div>');
+}
+
+// ---------------- Eventos ----------------
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest('[data-a],[data-tab]');
+  if (!t) return;
+  if (t.dataset.tab) { cerrarHoja(); tab(t.dataset.tab); return; }
+  const d = t.dataset, p = pantalla();
+  switch (d.a) {
+    case 'cerrar': cerrarHoja(); break;
+    case 'atras': atras(); break;
+    case 'ir': cerrarHoja(); ir(d.p, { id: d.id, sentido: d.sentido }); break;
+    case 'recargar': S.error = null; render(); await cargarEstado(); S.hist.lista = null; if (cola.length) reintentarCola(); break;
+    case 'olvidar': if (confirm('¿Cerrar el acceso en este celular? Vas a necesitar el enlace para volver a entrar.' + (cola.length ? '\n\nATENCIÓN: hay ' + cola.length + ' operaciones pendientes que se perderían.' : ''))) { ls.del(K_ACCESO); S.acc = null; S.est = null; render(); } break;
+    case 'elegirPerfil': {
+      const pf = E().perfiles.find(x => x.id === d.id);
+      if (!confirm('¿Usar el perfil «' + pf.nombre + '»? Su catálogo se copia a la planilla de prueba.')) return;
+      t.disabled = true; const r = await enviar('elegirPerfil', { perfil_id: d.id }, 'Perfil ' + pf.nombre);
+      if (r.estado === 'ok') await cargarEstado(); else t.disabled = false; break;
+    }
+    case 'carga': ir('carga', { tipo: d.tipo, paso: 'cat' }); break;
+    case 'verTodasCat': p.todas = !p.todas; render(); break;
+    case 'elegirCat': ir('carga', { tipo: p.tipo, paso: 'con', catId: d.id }); break;
+    case 'verTodosCon': p.todos = !p.todos; render(); break;
+    case 'elegirCon': ir('carga', { tipo: p.tipo, paso: 'det', catId: p.catId, conId: d.id }); break;
+    case 'selCta': document.querySelectorAll('#ctas .tile').forEach(x => x.classList.toggle('sel', x === t)); $('#cta').value = d.id; p.cuenta_id = d.id; break;
+    case 'nuevaCat': formCategoria(d.tipo); break;
+    case 'nuevoCon': formConcepto(d.id); break;
+    case 'conForm': formConcepto(null, d.id); break;
+    case 'cuentaForm': formCuenta(d.id); break;
+    case 'compForm': formCompromiso(d.id); break;
+    case 'registrarMov': {
+      if (!S.borrador) return;
+      t.disabled = true; t.textContent = 'Registrando…';
+      const b = S.borrador; S.borrador = null; ls.set(K_ULT_CTA, b.cuenta_id);
+      const datos = { tipo: b.tipo, concepto_id: b.concepto_id, cuenta_id: b.cuenta_id, importe: b.importe, fecha: b.fecha, descripcion: b.descripcion };
+      if (b.compromiso_id) { datos.compromiso_id = b.compromiso_id; datos.periodo = b.periodo; }
+      const r = await enviar('registrarMovimiento', datos, b.etiqueta);
+      cerrarHoja(); await despuesDeGuardar(r, true); break;
+    }
+    case 'confirmarGenerico': {
+      if (!S.pendienteGenerico) return;
+      t.disabled = true; t.textContent = 'Registrando…';
+      const g = S.pendienteGenerico; S.pendienteGenerico = null;
+      const r = await enviar(g.accion, g.datos, g.etiqueta);
+      cerrarHoja();
+      if (g.despues && (r.estado === 'ok' || r.estado === 'pendiente')) {
+        const sentido = g.datos.sentido || (E().deudas.find(x => x.id === g.datos.deuda_id) || {}).sentido || 'DEBO';
+        S.pila = [{ p: 'inicio' }, { p: 'deudas', sentido: sentido }];
+      }
+      await despuesDeGuardar(r, g.volver); break;
+    }
+    case 'hEstado': S.hist.filtros.estado = d.v; document.querySelectorAll('[data-a=hEstado]').forEach(x => x.classList.toggle('on', x === t)); break;
+    case 'hLimpiar': S.hist.filtros = { desde: '', hasta: '', cuenta_id: '', tipo: '', estado: '' }; S.hist.lista = null; render(); break;
+    case 'hRecargar': S.hist.lista = null; render(); break;
+    case 'verMov': verMov(d.id); break;
+    case 'anularMov': {
+      const motivo = ($('#mot').value || '').trim();
+      if (motivo.length < 3) { aviso('Escribí el motivo de la anulación', 'error'); $('#mot').focus(); return; }
+      if (!confirm('¿Anular este movimiento? Va a dejar de contar en los saldos.')) return;
+      t.disabled = true; const r = await enviar('anularMovimiento', { id: d.id, motivo: motivo }, 'Anulación de movimiento');
+      cerrarHoja(); await despuesDeGuardar(r, false); break;
+    }
+    case 'dSentido': p.sentido = d.v; render(); break;
+    case 'dCerradas': p.verCerradas = !p.verCerradas; render(); break;
+    case 'dnSentido': p.sentido = d.v; render(); break;
+    case 'anularDeuda': {
+      const motivo = prompt('Motivo para anular la deuda:');
+      if (motivo === null) return;
+      if (motivo.trim().length < 3) { aviso('Escribí un motivo (mínimo 3 letras)', 'error'); return; }
+      const r = await enviar('anularDeuda', { id: d.id, motivo: motivo.trim() }, 'Anulación de deuda');
+      await despuesDeGuardar(r, false); break;
+    }
+    case 'pagarComp': {
+      const c = E().compromisos.find(x => x.id === d.id), k = con(c.concepto_id);
+      if (!k || !k.activo || !cat(k.categoria_id) || !cat(k.categoria_id).activo) { aviso('El concepto de este compromiso está desactivado. Editá el compromiso.', 'error', 5000); return; }
+      ir('carga', { tipo: 'EGRESO', paso: 'det', catId: k.categoria_id, conId: k.id, compromiso_id: c.id, compNombre: c.nombre, periodo: d.periodo,
+        importe: importeTxt(Math.max((c.importe_estimado || 0) - (((S.compData && S.compData.compromisos) || E().compromisosMes).find(x => x.id === c.id) || { pagado: 0 }).pagado, 0) || ''), cuenta_id: c.cuenta_sugerida_id && cuenta(c.cuenta_sugerida_id) && cuenta(c.cuenta_sugerida_id).activo ? c.cuenta_sugerida_id : undefined });
+      break;
+    }
+    case 'mes': {
+      const [y, m] = (S.compPeriodo || E().mes.periodo).split('-').map(Number);
+      const dt = new Date(y, m - 1 + Number(d.d), 1);
+      S.compPeriodo = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'); S.compData = null; render(); break;
+    }
+    case 'compRecargar': S.compData = null; render(); break;
+    case 'pReintentar': { const o = cola.find(x => x.op_id === d.id); if (o) { t.disabled = true; const r = await procesar(o, true); if (r.estado === 'ok') await cargarEstado(); else render(); } break; }
+    case 'pVerificar': {
+      t.disabled = true;
+      try {
+        const j = await llamar('verificarOperacion', {}, d.id);
+        if (j.ok && j.existe) { colaQuitar(d.id); aviso('✅ Estaba guardada en la planilla. Se quitó de pendientes.', 'ok', 4000); await cargarEstado(); }
+        else if (j.ok) aviso('No llegó a la planilla. Podés reintentar (no se duplicará) o descartarla.', 'warn', 6000);
+        else aviso('No se pudo verificar: ' + j.mensaje, 'error');
+      } catch (e) { aviso('Sin conexión: no se pudo verificar todavía.', 'warn'); }
+      render(); break;
+    }
+    case 'pDescartar': {
+      if (!confirm('¿Descartar esta operación? Usalo solo si «Verificar» dijo que NO llegó a la planilla.')) return;
+      colaQuitar(d.id); render(); break;
+    }
+  }
 });
-document.addEventListener('submit',ev=>{
- const f=ev.target;const id=f.id;if(!['transaction-form','transfer-form','category-form','concept-form','account-form'].includes(id))return;ev.preventDefault();let fd=new FormData(f);
- if(id==='category-form'){let nombre=String(fd.get('nombre')||'').trim(),tipo=String(fd.get('tipo')),emoji=String(fd.get('emoji')||'').trim()||'📁';if(!nombre)return;if(store.categorias.some(c=>c.tipo===tipo&&c.nombre.toLowerCase()===nombre.toLowerCase())){toast('Esta categoría ya existe');return;}let cid='cat-'+uid();store.categorias.push({id:cid,nombre,tipo,emoji,orden:store.categorias.filter(c=>c.tipo===tipo).length+1,activo:true});persist();hideModal();if(page==='carga'&&flow?.etapa==='categoria'&&tipo===flow.tipo){flow.categoriaId=cid;flow.etapa='concepto';}render();toast('Categoría agregada a la demo');return;}
- if(id==='concept-form'){let nombre=String(fd.get('nombre')||'').trim(),catId=String(fd.get('categoriaId')),importe=String(fd.get('importe')||'').trim();if(!nombre||!category(catId))return;if(getConcepts(catId).some(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){toast('El concepto ya existe en esa categoría');return;}let c={id:'con-'+uid(),categoriaId:catId,nombre,importeSugerido:importe?Number(importe):null,orden:getConcepts(catId).length+1,activo:true};store.conceptos.push(c);persist();hideModal();if(page==='carga'&&flow?.etapa==='concepto'&&flow.categoriaId===catId){flow.conceptoId=c.id;flow.etapa='detalle';}render();toast('Concepto agregado a la demo');return;}
- if(id==='account-form'){let nombre=String(fd.get('nombre')||'').trim(),saldo=Number(fd.get('saldo'));if(!nombre||!Number.isFinite(saldo))return;store.cuentas.push({id:'cta-'+uid(),nombre,tipo:String(fd.get('tipo')),saldoInicial:saldo});persist();hideModal();render();toast('Cuenta de prueba creada');return;}
- if(id==='transaction-form'){let importe=Number(fd.get('amount')),cuentaId=String(fd.get('account')),fecha=String(fd.get('date'));if(!Number.isFinite(importe)||importe<=0||!account(cuentaId)||!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){toast('Revisá importe, fecha y cuenta');return;}let cat=category(flow.categoriaId),con=concept(flow.conceptoId);if(!cat||!con)return;f.querySelector('[type="submit"]').disabled=true;store.movimientos.push({id:uid(),opId:uid(),tipo:flow.tipo,fecha,registro:new Date().toISOString(),categoriaId:cat.id,categoriaNombre:cat.nombre,conceptoId:con.id,conceptoNombre:con.nombre,cuentaId,importe,descripcion:String(fd.get('description')||'').trim(),estado:'ACTIVO'});persist();nav('inicio');toast('¡Movimiento de prueba registrado!');return;}
- if(id==='transfer-form'){let origen=String(fd.get('origin')),destino=String(fd.get('dest')),importe=Number(fd.get('amount')),fecha=String(fd.get('date'));if(origen===destino){toast('Elegí dos cuentas diferentes');return;}if(!account(origen)||!account(destino)||!Number.isFinite(importe)||importe<=0||!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){toast('Revisá los datos de la transferencia');return;}f.querySelector('[type="submit"]').disabled=true;store.movimientos.push({id:uid(),opId:uid(),tipo:'TRANSFERENCIA',fecha,registro:new Date().toISOString(),cuentaId:origen,destinoId:destino,importe,descripcion:String(fd.get('description')||'').trim(),estado:'ACTIVO'});persist();nav('inicio');toast('Transferencia de prueba registrada');}
+
+async function despuesDeGuardar(r, volverAInicio) {
+  if (r.estado === 'ok' || r.estado === 'pendiente') {
+    if (volverAInicio) S.pila = [{ p: 'inicio' }];
+    S.hist.lista = null; S.compData = null;
+  }
+  render();
+  if (r.estado === 'ok') await cargarEstado();
+}
+
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'q-con') {
+    const p = pantalla(); p.q = ev.target.value;
+    const q = norm(p.q), lista = consCat(p.catId);
+    const filtrados = q ? lista.filter(x => norm(x.nombre).indexOf(q) !== -1) : (p.todos ? lista : lista.slice(0, TOP()));
+    $('#lista-con').innerHTML = tilesConceptos(filtrados, !q, p.catId) + (q && !filtrados.length ? '<div class="vacio" style="grid-column:1/-1">Sin resultados para «' + esc(p.q) + '».</div>' : '');
+    const vt = document.querySelector('[data-a=verTodosCon]'); if (vt) vt.style.display = q ? 'none' : '';
+  }
+  if (ev.target.id === 'imp') {
+    const n = leerImporte(ev.target.value);
+    $('#imp-ver').textContent = ev.target.value ? (n > 0 ? '= ' + fmt$(n) : 'Importe no válido (máximo 2 decimales)') : 'Escribí el importe';
+  }
 });
-$('#profile-switch').addEventListener('click',chooseProfile);
-modal.addEventListener('click',ev=>{if(ev.target===modal)hideModal();});
-(function init(){if(!CAT||!Array.isArray(CAT.perfiles)){app.innerHTML='<p>No se pudo cargar catalogo.js. Subí los dos archivos juntos.</p>';return;}let id=localStorage.getItem('vao_balance_demo_profile');if(id&&CAT.perfiles.some(p=>p.id===id)){perfil=CAT.perfiles.find(p=>p.id===id);store=readProfile(id);render();}else{app.innerHTML='<div class="eyebrow">BIENVENIDO</div><h1 class="page-title">Tus números, a tu manera.</h1><div class="welcome">Elegí con qué perfil querés conocer la aplicación. Podrás cambiarlo cuando quieras.</div><button class="primary" data-action="choose-profile" style="margin-top:20px">Elegir mi perfil</button>';chooseProfile();}})();
+
+function pedirConfirmacion(titulo, filas, accion, datos, etiqueta, volver) {
+  S.pendienteGenerico = { accion: accion, datos: datos, etiqueta: etiqueta, volver: volver };
+  abrirHoja(titulo, '<div class="resumen">' + filas.filter(f => f[1] !== '' && f[1] != null).map(f => '<div><span>' + esc(f[0]) + '</span><span>' + esc(f[1]) + '</span></div>').join('') + '</div>' +
+    '<button class="btn" data-a="confirmarGenerico">Confirmar y registrar</button><button class="btn sec2" style="margin-top:8px" data-a="cerrar">Corregir</button>');
+}
+
+document.addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const f = ev.target, id = f.id, val = s => ($(s) ? $(s).value : '');
+  const btn = f.querySelector('[type=submit]');
+  const guardar = async (accion, datos, etiqueta) => { btn.disabled = true; const r = await enviar(accion, datos, etiqueta); btn.disabled = false; return r; };
+  if (id === 'f-mov') { confirmarMovimiento(); return; }
+  if (id === 'f-tr') {
+    const imp = leerImporte(val('#t-i')), o = val('#t-o'), de = val('#t-d');
+    if (o === de) { aviso('Elegí dos cuentas distintas', 'error'); return; }
+    if (!(imp > 0)) { aviso('Revisá el importe', 'error'); return; }
+    pedirConfirmacion('Confirmar transferencia', [['Importe', fmt$(imp)], ['Desde', nombreCta(o)], ['Hacia', nombreCta(de)], ['Fecha', fFecha(val('#t-f'))], ['Detalle', val('#t-x').trim()]],
+      'registrarTransferencia', { cuenta_id: o, cuenta_destino_id: de, importe: imp, fecha: val('#t-f'), descripcion: val('#t-x').trim() }, 'Transferencia ' + fmt$(imp), true);
+    return;
+  }
+  if (id === 'f-hist') { S.hist.filtros = Object.assign(S.hist.filtros, { desde: val('#h-d'), hasta: val('#h-h'), cuenta_id: val('#h-c'), tipo: val('#h-t') }); S.hist.lista = null; render(); return; }
+  if (id === 'f-deuda') {
+    const p = pantalla(), s = p.sentido || 'DEBO', imp = leerImporte(val('#dn-i')), cp = val('#dn-c').trim(), mover = $('#dn-m').checked;
+    if (!cp) { aviso('Escribí el nombre', 'error'); return; }
+    if (!(imp > 0)) { aviso('Revisá el importe', 'error'); return; }
+    if (mover && !val('#dn-cta')) { aviso('Elegí la cuenta', 'error'); return; }
+    pedirConfirmacion('Confirmar deuda', [['Tipo', s === 'DEBO' ? 'Debo' : 'Me deben'], ['Con', cp], ['Importe', fmt$(imp)], ['Fecha', fFecha(val('#dn-f'))], ['Vence', fFecha(val('#dn-v'))], ['Descripción', val('#dn-x').trim()],
+      ['Dinero', mover ? (s === 'DEBO' ? 'Entra a ' : 'Sale de ') + nombreCta(val('#dn-cta')) : 'No se movió dinero']],
+      'crearDeuda', { sentido: s, contraparte: cp, importe: imp, fecha: val('#dn-f'), vencimiento: val('#dn-v'), descripcion: val('#dn-x').trim(), mover_dinero: mover, cuenta_id: mover ? val('#dn-cta') : '' }, 'Deuda ' + cp + ' ' + fmt$(imp), false);
+    S.pendienteGenerico.despues = 'deudas';
+    return;
+  }
+  if (id === 'f-pago') {
+    const p = pantalla(), dd = E().deudas.find(x => x.id === p.id), imp = leerImporte(val('#pg-i'));
+    if (!(imp > 0)) { aviso('Revisá el importe', 'error'); return; }
+    if (imp > dd.pendiente) { aviso('El importe supera lo pendiente (' + fmt$(dd.pendiente) + ')', 'error'); return; }
+    pedirConfirmacion(dd.sentido === 'DEBO' ? 'Confirmar pago' : 'Confirmar cobro', [['Deuda', dd.contraparte], ['Importe', fmt$(imp)], ['Cuenta', nombreCta(val('#pg-c'))], ['Fecha', fFecha(val('#pg-f'))], ['Queda pendiente', fmt$(Math.round((dd.pendiente - imp) * 100) / 100)]],
+      'pagarDeuda', { deuda_id: dd.id, importe: imp, cuenta_id: val('#pg-c'), fecha: val('#pg-f'), descripcion: val('#pg-x').trim() }, (dd.sentido === 'DEBO' ? 'Pago a ' : 'Cobro de ') + dd.contraparte + ' ' + fmt$(imp), false);
+    S.pendienteGenerico.despues = 'atras';
+    return;
+  }
+  if (id === 'f-ncat') {
+    const r = await guardar('crearCategoria', { nombre: val('#nc-n'), tipo: val('#nc-t'), emoji: val('#nc-e') }, 'Categoría ' + val('#nc-n'));
+    if (r.estado === 'ok') { cerrarHoja(); await cargarEstado(); const p = pantalla(); const c = r.j.id ? cat(r.j.id) : null; if (p.p === 'carga' && p.paso === 'cat' && c && c.tipo === p.tipo) ir('carga', { tipo: p.tipo, paso: 'con', catId: c.id }); }
+    else if (r.estado === 'pendiente') cerrarHoja();
+    return;
+  }
+  if (id === 'f-con') {
+    const editar = f.dataset.id;
+    const impTxt = val('#cn-i').trim(), imp = impTxt ? leerImporte(impTxt) : null;
+    if (impTxt && !(imp > 0)) { aviso('Importe sugerido no válido', 'error'); return; }
+    const datos = editar ? { id: editar, nombre: val('#cn-n'), importe_sugerido: imp, orden: Number(val('#cn-o')), activo: $('#cn-a').checked } : { categoria_id: f.dataset.cat, nombre: val('#cn-n'), importe_sugerido: imp };
+    const r = await guardar(editar ? 'editarConcepto' : 'crearConcepto', datos, (editar ? 'Edición de concepto ' : 'Concepto ') + val('#cn-n'));
+    if (r.estado === 'ok') {
+      cerrarHoja(); await cargarEstado();
+      const p = pantalla();
+      if (!editar && p.p === 'carga' && p.paso === 'con' && r.j.id && con(r.j.id)) ir('carga', { tipo: p.tipo, paso: 'det', catId: p.catId, conId: r.j.id });
+    } else if (r.estado === 'pendiente') cerrarHoja();
+    return;
+  }
+  if (id === 'f-cat') {
+    const r = await guardar('editarCategoria', { id: f.dataset.id, nombre: val('#ca-n'), emoji: val('#ca-e'), orden: Number(val('#ca-o')), activo: $('#ca-a').checked }, 'Edición de categoría ' + val('#ca-n'));
+    if (r.estado === 'ok') await cargarEstado();
+    return;
+  }
+  if (id === 'f-cta') {
+    const editar = f.dataset.id, s = val('#ct-s').trim();
+    let saldo = 0;
+    if (s) { const neg = s.startsWith('-'); saldo = leerImporte(s.replace(/^-/, '')); if (!(saldo >= 0)) { aviso('Saldo inicial no válido', 'error'); return; } if (neg) saldo = -saldo; }
+    const datos = editar ? { id: editar, nombre: val('#ct-n'), tipo: val('#ct-t'), saldo_inicial: saldo, activo: $('#ct-a').checked } : { nombre: val('#ct-n'), tipo: val('#ct-t'), saldo_inicial: saldo };
+    const r = await guardar(editar ? 'editarCuenta' : 'crearCuenta', datos, (editar ? 'Edición de cuenta ' : 'Cuenta ') + val('#ct-n'));
+    if (r.estado === 'ok') { cerrarHoja(); await cargarEstado(); } else if (r.estado === 'pendiente') cerrarHoja();
+    return;
+  }
+  if (id === 'f-comp') {
+    const editar = f.dataset.id, it = val('#cp-i').trim(), imp = it ? leerImporte(it) : null;
+    if (it && !(imp > 0)) { aviso('Importe estimado no válido', 'error'); return; }
+    if (!val('#cp-k')) { aviso('Elegí un concepto de gasto', 'error'); return; }
+    const datos = { nombre: val('#cp-n'), concepto_id: val('#cp-k'), importe_estimado: imp, dia_vencimiento: Number(val('#cp-d')), cuenta_sugerida_id: val('#cp-c') };
+    if (editar) { datos.id = editar; datos.activo = $('#cp-a').checked; }
+    const r = await guardar(editar ? 'editarCompromiso' : 'crearCompromiso', datos, 'Compromiso ' + val('#cp-n'));
+    if (r.estado === 'ok') { cerrarHoja(); S.compData = null; await cargarEstado(); } else if (r.estado === 'pendiente') cerrarHoja();
+    return;
+  }
+});
+
+// ---------------- Arranque ----------------
+(async function iniciar() {
+  leerAcceso(); pintarPend();
+  history.replaceState({ raiz: 1 }, ''); guarda();
+  S.pila = [{ p: 'inicio' }];
+  render();
+  // Si se abre el enlace de acceso con la app ya abierta en la misma pestaña, el navegador no recarga: lo detectamos.
+  window.addEventListener('hashchange', async () => {
+    if (!/k=[a-f0-9]{64}/.test(location.hash)) return;
+    leerAcceso(); guarda(); S.est = null; S.error = null; S.pila = [{ p: 'inicio' }]; render();
+    if (S.acc) { await cargarEstado(); if (cola.length) reintentarCola(); }
+  });
+  if (!S.acc) return;
+  await cargarEstado();
+  if (cola.length) reintentarCola();
+  setInterval(() => { if (cola.length) reintentarCola(); }, 45000);
+  window.addEventListener('online', () => { reintentarCola(); if (S.error) cargarEstado(); });
+})();
 </script>
 </body>
 </html>
