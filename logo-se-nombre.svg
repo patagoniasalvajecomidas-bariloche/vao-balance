@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 660" role="img" aria-labelledby="title desc">
+  <title id="title">SE logo con nombre</title>
+  <desc id="desc">Logotipo SE con el nombre Sebastián Eggui. El nombre es texto editable. Fondo transparente.</desc>
+  <defs>
+    <linearGradient id="seBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#21A8F6"/>
+      <stop offset="100%" stop-color="#0B49E8"/>
+    </linearGradient>
+    <linearGradient id="seGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6BCB17"/>
+      <stop offset="100%" stop-color="#24A72E"/>
+    </linearGradient>
+    <linearGradient id="seSun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFC21A"/>
+      <stop offset="100%" stop-color="#FF8C00"/>
+    </linearGradient>
+    <linearGradient id="seHorizon" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="1410" y2="0">
+      <stop offset="0%" stop-color="#0B49E8"/>
+      <stop offset="28%" stop-color="#16A6EF"/>
+      <stop offset="50%" stop-color="#43B02A"/>
+      <stop offset="70%" stop-color="#D6CF00"/>
+      <stop offset="86%" stop-color="#FFB000"/>
+      <stop offset="100%" stop-color="#FF8C00"/>
+    </linearGradient>
+    <clipPath id="seSobreHorizonte">
+      <path d="M0 0 L1440 0 L1440 474 L1410 454 C 1320 424, 1160 410, 960 410 C 650 410, 320 416, 40 486 L0 496 Z"/>
+    </clipPath>
+  </defs>
+  <g id="letras" clip-path="url(#seSobreHorizonte)">
+    <!-- S -->
+    <path id="S" d="M260.5 70 L560.0 70 L468.0 162 L260.5 162 A18.5 18.5 0 0 0 260.5 199.0 L409.5 199.0 A110.5 110.5 0 0 1 409.5 420 L90.0 420 L182.0 328.0 L409.5 328.0 A18.5 18.5 0 0 0 409.5 291.0 L260.5 291.0 A110.5 110.5 0 0 1 260.5 70 Z" fill="url(#seBlue)"/>
+    <!-- E -->
+    <path id="E" d="M616.6 70 L980 70 L888.0 162 L692 162 L692 199.0 L905 199.0 L813.0 291.0 L692 291.0 L692 328.0 L925 328.0 L1017.0 420 L600 420 L600 86.6 Z" fill="url(#seGreen)"/>
+  </g>
+  <!-- Sol -->
+  <g id="sol">
+    <path d="M1075 430.6 A100 100 0 0 1 1275 430.6 Z" fill="url(#seSun)"/>
+    <g stroke="#FFB000" stroke-width="15" stroke-linecap="round">
+      <line x1="1175.0" y1="268.8" x2="1175.0" y2="222.8"/>
+      <line x1="1076.7" y1="311.4" x2="1042.0" y2="276.7"/>
+      <line x1="1273.3" y1="311.4" x2="1308.0" y2="276.7"/>
+    </g>
+  </g>
+  <!-- Horizonte -->
+  <path id="horizonte" d="M40 500 C 320 430, 650 424, 960 424 C 1160 424, 1320 438, 1410 468" fill="none" stroke="url(#seHorizon)" stroke-width="15" stroke-linecap="round"/>
+  <text x="720" y="610" text-anchor="middle" font-family="Montserrat, Poppins, 'Segoe UI', Arial, sans-serif"
+        font-size="84" font-weight="600" letter-spacing="6" fill="#8FA3B8">SEBASTIÁN EGGUI</text>
+</svg>
