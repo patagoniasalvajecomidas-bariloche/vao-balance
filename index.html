@@ -74,7 +74,12 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
 .toast.ver{display:block}.t-ok{background:#0f6b45;color:#fff}.t-error{background:#b3261e;color:#fff}.t-warn{background:#fff4d6;color:#6b4500;border:1px solid #e9c66b}.t-info{background:#173f32;color:#fff}
 .mes{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--borde);border-radius:14px;padding:6px;margin:10px 0}.mes button{border:0;background:var(--claro);border-radius:10px;width:40px;height:36px;font-size:18px}.mes b{font-size:15px}
 .toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:650}.toggle input{width:22px;height:22px}
+.bug{border:1px solid #f1c5bf;background:#fff;color:#a8322a;border-radius:20px;padding:6px 10px;font-size:12px;font-weight:800;white-space:nowrap;flex-shrink:0}
+.marca{overflow:hidden}.marca b,.marca small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#velo-rep{z-index:60}.tipos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.tipos button{padding:12px;border-radius:13px;border:1px solid #d8e4dc;background:#fff;font-weight:800}
+.tipos button.on{border:2px solid var(--verde3);background:var(--claro)}.tipos button.on.err{border-color:#c0392b;background:#fdecea;color:#a8322a}
 .ver-badge{font-size:10px;color:#94a69b;text-align:center;margin-top:24px}
+@media(max-width:380px){.bug .w{display:none}.top{gap:7px;padding:10px 12px}}
 @media(max-width:360px){main{padding:14px 12px}.grid3{gap:7px}.tile{min-height:92px;padding:10px 4px}.tile .l{font-size:11.5px}.hero .monto{font-size:27px}.acc span:last-child{font-size:11px}}
 </style>
 </head>
@@ -84,6 +89,7 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
     <div class="logo">VAO</div>
     <div class="marca"><b>VAO BALANCE</b><small id="ver-top"></small></div>
     <button class="pend" id="btn-pend" data-a="ir" data-p="pendientes">⏳ <span id="n-pend">0</span> pendiente</button>
+    <button class="bug" id="btn-bug" data-a="reportar" aria-label="Reportar problema" style="display:none">🐞<span class="w"> Reportar</span></button>
   </header>
   <div class="env">🧪 STAGING · DEMO — datos de prueba, no dinero real</div>
   <main id="app"><div class="cargando"><div class="spin"></div>Cargando…</div></main>
@@ -96,6 +102,7 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
   </nav>
 </div>
 <div class="velo" id="velo"><div class="hoja" id="hoja" role="dialog" aria-modal="true"></div></div>
+<div class="velo" id="velo-rep"><div class="hoja" id="hoja-rep" role="dialog" aria-modal="true" aria-label="Reportar problema"></div></div>
 <div class="toast" id="toast" role="status"></div>
 <script>
 'use strict';
@@ -104,7 +111,7 @@ h1{font-size:24px;letter-spacing:-.6px;margin:4px 0 6px;line-height:1.15}h2{font
 // Sin catálogo, cuentas ni importes escritos acá: todo viene del backend (Google Sheets).
 // El acceso llega por un enlace personal (#k=CLAVE&api=URL) y queda guardado en este celular.
 // =================================================================
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const PRODUCTO = 'VAO BALANCE V1 STAGING';
 const K_ACCESO = 'vb_acceso_v1', K_COLA = 'vb_cola_v1', K_ULT_CTA = 'vb_ult_cuenta_v1';
 
@@ -221,7 +228,7 @@ function aviso(msg, tipo, ms) {
 }
 $('#toast').addEventListener('click', () => $('#toast').className = 'toast');
 function abrirHoja(titulo, html) {
-  $('#hoja').innerHTML = '<div class="hoja-top"><h2>' + esc(titulo) + '</h2><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></div>' + html;
+  $('#hoja').innerHTML = '<div class="hoja-top"><h2>' + esc(titulo) + '</h2><span style="display:flex;gap:8px"><button class="bug" data-a="reportar" aria-label="Reportar problema">🐞</button><button class="x" data-a="cerrar" aria-label="Cerrar">×</button></span></div>' + html;
   $('#velo').classList.add('ver');
 }
 const hojaAbierta = () => $('#velo').classList.contains('ver');
@@ -236,6 +243,7 @@ function guarda() { history.pushState({ vb: 1 }, ''); }
 function ir(p, params) { S.pila.push(Object.assign({ p: p }, params || {})); render(); window.scrollTo(0, 0); }
 function tab(p) { S.pila = [{ p: 'inicio' }]; if (p !== 'inicio') S.pila.push({ p: p }); render(); window.scrollTo(0, 0); }
 function atras() {
+  if (repAbierto()) { cerrarReporte(); return true; }
   if (hojaAbierta()) { cerrarHoja(); return true; }
   if (S.pila.length > 1) { S.pila.pop(); render(); window.scrollTo(0, 0); return true; }
   return false;
@@ -274,6 +282,7 @@ const NOMBRE_TIPO = { INGRESO: 'Ingreso', EGRESO: 'Gasto', TRANSFERENCIA: 'Trans
 function render() {
   $('#ver-top').textContent = 'V1 STAGING · app ' + APP_VERSION + (S.est ? ' · backend ' + S.est.build : '');
   const p = pantalla();
+  $('#btn-bug').style.display = S.acc ? '' : 'none';
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === (S.pila[1] ? S.pila[1].p : 'inicio') || (b.dataset.tab === 'inicio' && S.pila.length === 1)));
   const app = $('#app');
   if (!S.acc) { app.innerHTML = vSinAcceso(); return; }
@@ -288,6 +297,7 @@ function render() {
   const V = { inicio: vInicio, carga: vCarga, transferir: vTransferir, historial: vHistorial, deudas: vDeudas, deudaNueva: vDeudaNueva, deudaPagar: vDeudaPagar,
     compromisos: vCompromisos, ajustes: vAjustes, categoria: vCategoria };
   app.innerHTML = banner + (V[p.p] || vInicio)(p) + '<div class="ver-badge">' + esc(PRODUCTO) + ' · app v' + APP_VERSION + ' · backend build ' + esc(E().build) + '</div>';
+  reponerBorrador(p);
   if (p.p === 'historial' && S.hist.lista === null) cargarHistorial();
   if (p.p === 'compromisos' && (!S.compData || S.compData.periodo !== (S.compPeriodo || E().mes.periodo))) cargarCompromisos();
 }
@@ -584,14 +594,96 @@ function vPendientes() {
       : '<div class="vacio" style="margin-top:14px">No hay operaciones pendientes. ✅</div>');
 }
 
+// ---------------- 🐞 Reportar problema ----------------
+// El reporte vive SOLO en memoria mientras se escribe (no se usa localStorage) y se guarda en la hoja
+// INCIDENCIAS mediante el backend, con un op_id fijo: reintentar nunca duplica.
+const repAbierto = () => $('#velo-rep').classList.contains('ver');
+function describirPantalla() {
+  const p = pantalla();
+  let d = p.p;
+  if (p.p === 'carga') d += ' · ' + (p.tipo === 'EGRESO' ? 'gasto' : 'ingreso') + ' · paso ' + ({ cat: 'categoría', con: 'concepto', det: 'importe y detalle' }[p.paso] || p.paso);
+  if (p.p === 'deudas' && p.sentido) d += ' · ' + p.sentido;
+  if (p.p === 'compromisos') d += ' · ' + (S.compPeriodo || (S.est && S.est.mes.periodo) || '');
+  if (hojaAbierta()) d += ' · ventana: ' + (($('#hoja .hoja-top h2') || {}).textContent || '');
+  if (!S.est && S.error) d += ' · error: ' + (S.error.error || '');
+  return d.slice(0, 80);
+}
+function infoNavegador() {
+  const ua = navigator.userAgent.replace(/\s+/g, ' ').slice(0, 180);
+  return ua + ' · pantalla ' + screen.width + 'x' + screen.height + ' · ventana ' + window.innerWidth + 'x' + window.innerHeight +
+    ' · ' + (navigator.language || '') + ' · ' + (navigator.onLine ? 'en línea' : 'sin conexión') + ' · pendientes ' + cola.length;
+}
+function abrirReporte() {
+  if (!S.reporte || S.reporte.estado === 'ok') S.reporte = { op_id: nuevoOpId(), tipo: 'ERROR', texto: '', estado: 'editando', mensaje: '', id: '' };
+  S.reporte.pantalla = describirPantalla();
+  $('#velo-rep').classList.add('ver');
+  pintarReporte();
+  setTimeout(() => { const t = $('#rep-txt'); if (t && S.reporte.estado !== 'ok') t.focus(); }, 50);
+}
+function cerrarReporte() {
+  $('#velo-rep').classList.remove('ver'); $('#hoja-rep').innerHTML = '';
+  if (S.reporte && S.reporte.estado === 'ok') S.reporte = null;   // si no se guardó, el borrador queda en memoria
+}
+function pintarReporte() {
+  const r = S.reporte, enviando = r.estado === 'enviando';
+  let h = '<div class="hoja-top"><h2>🐞 Reportar problema</h2><button class="x" data-a="cerrarRep" aria-label="Cerrar">×</button></div>';
+  if (r.estado === 'ok') {
+    h += '<div class="aviso" style="background:var(--okf);color:var(--ok);border:1px solid #bfe5cf;font-size:14px"><b>✅ Reporte guardado</b><br>ID: <b>' + esc(r.id) + '</b><br>' + esc(r.fecha || '') + '</div>' +
+      '<p class="sub">Quedó en la hoja INCIDENCIAS con estado NUEVO. Gracias.</p>' +
+      '<div class="fila-btn"><button class="btn" data-a="cerrarRep">Volver a lo que estaba haciendo</button><button class="btn sec2" data-a="repOtro">Reportar otro</button></div>';
+    $('#hoja-rep').innerHTML = h; return;
+  }
+  h += '<p class="sub" style="margin-bottom:10px">Lo que estabas haciendo queda guardado; al cerrar volvés al mismo lugar.</p>' +
+    '<div class="tipos"><button type="button" class="' + (r.tipo === 'ERROR' ? 'on err' : '') + '" data-a="repTipo" data-v="ERROR"' + (enviando ? ' disabled' : '') + '>🐞 ERROR</button><button type="button" class="' + (r.tipo === 'SUGERENCIA' ? 'on' : '') + '" data-a="repTipo" data-v="SUGERENCIA"' + (enviando ? ' disabled' : '') + '>💡 SUGERENCIA</button></div>' +
+    '<div class="campo"><label for="rep-txt">¿Qué pasó? (obligatorio)</label><textarea id="rep-txt" maxlength="2000" style="min-height:110px" placeholder="Ej.: toqué Confirmar y la pantalla quedó en blanco"' + (enviando ? ' readonly' : '') + '>' + esc(r.texto) + '</textarea>' +
+    '<small>Se adjunta solo: pantalla «' + esc(r.pantalla) + '», versión app ' + APP_VERSION + ', tipo de celular, fecha del servidor. Nunca se envían claves ni datos de tus cuentas.</small></div>';
+  if (r.estado === 'error') h += '<div class="aviso a-err"><b>No se pudo confirmar el guardado.</b> ' + esc(r.mensaje) + '<br>Tu texto sigue acá. «Reintentar» usa el mismo ID (' + esc(r.op_id.slice(0, 11)) + '…): si ya había llegado, no se duplica.</div>';
+  else if (r.mensaje) h += '<div class="aviso a-err">' + esc(r.mensaje) + '</div>';
+  h += '<button class="btn" data-a="repGuardar"' + (enviando ? ' disabled' : '') + '>' + (enviando ? 'Guardando…' : r.estado === 'error' ? 'Reintentar guardado' : 'GUARDAR REPORTE') + '</button>';
+  if (r.estado === 'error') h += '<button class="btn sec2" style="margin-top:8px" data-a="repCopiar">📋 Copiar texto (respaldo manual)</button>';
+  $('#hoja-rep').innerHTML = h;
+}
+async function guardarReporte() {
+  const r = S.reporte;
+  r.texto = ($('#rep-txt') ? $('#rep-txt').value : r.texto);
+  if (r.texto.trim().length < 5) { r.mensaje = 'Contá qué pasó (mínimo 5 letras).'; pintarReporte(); $('#rep-txt').focus(); return; }
+  r.estado = 'enviando'; r.mensaje = ''; pintarReporte();
+  const datos = { tipo: r.tipo, descripcion: r.texto.trim(), pantalla: r.pantalla, version_app: String(APP_VERSION), navegador: infoNavegador() };
+  let j;
+  try { j = await llamar('reportarIncidencia', datos, r.op_id); }
+  catch (e) { r.estado = 'error'; r.mensaje = e.mensaje || 'Sin conexión'; if (repAbierto()) pintarReporte(); return; }
+  if (j.ok) { r.estado = 'ok'; r.id = j.id; r.fecha = j.fecha_servidor || ''; if (repAbierto()) pintarReporte(); aviso(j.duplicado ? 'ℹ️ El reporte ya estaba guardado (' + j.id + '). No se duplicó.' : '✅ Reporte guardado: ' + j.id, j.duplicado ? 'info' : 'ok', 3500); return; }
+  if (ERR_DUDOSOS.indexOf(j.error) !== -1) { r.estado = 'error'; r.mensaje = j.mensaje; }
+  else { r.estado = 'editando'; r.mensaje = 'No se guardó: ' + j.mensaje; }
+  if (repAbierto()) pintarReporte();
+}
+async function copiarReporte() {
+  const r = S.reporte;
+  const txt = '[VAO BALANCE · ' + r.tipo + ']\n' + r.texto + '\n— Pantalla: ' + r.pantalla + ' · app v' + APP_VERSION + ' · ' + new Date().toLocaleString('es-AR') + ' · ref ' + r.op_id;
+  try { await navigator.clipboard.writeText(txt); aviso('📋 Texto copiado. Podés pegarlo en WhatsApp.', 'info', 3000); }
+  catch (e) {
+    const t = $('#rep-txt'); t.value = txt; t.removeAttribute('readonly'); t.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (x) {}
+    t.value = r.texto;
+    aviso(ok ? '📋 Texto copiado.' : 'No se pudo copiar solo: mantené apretado el texto y elegí Copiar.', ok ? 'info' : 'warn', 4000);
+  }
+}
+$('#velo-rep').addEventListener('click', e => { if (e.target.id === 'velo-rep') cerrarReporte(); });
+
 // ---------------- Eventos ----------------
 document.addEventListener('click', async ev => {
   const t = ev.target.closest('[data-a],[data-tab]');
   if (!t) return;
-  if (t.dataset.tab) { cerrarHoja(); tab(t.dataset.tab); return; }
+  if (t.dataset.tab) { if (repAbierto()) return; cerrarHoja(); tab(t.dataset.tab); return; }
   const d = t.dataset, p = pantalla();
   switch (d.a) {
     case 'cerrar': cerrarHoja(); break;
+    case 'reportar': abrirReporte(); break;
+    case 'cerrarRep': cerrarReporte(); break;
+    case 'repOtro': S.reporte = null; abrirReporte(); break;
+    case 'repTipo': S.reporte.tipo = d.v; S.reporte.texto = $('#rep-txt').value; pintarReporte(); break;
+    case 'repGuardar': await guardarReporte(); break;
+    case 'repCopiar': await copiarReporte(); break;
     case 'atras': atras(); break;
     case 'ir': cerrarHoja(); ir(d.p, { id: d.id, sentido: d.sentido }); break;
     case 'recargar': S.error = null; render(); await cargarEstado(); S.hist.lista = null; if (cola.length) reintentarCola(); break;
@@ -695,7 +787,21 @@ async function despuesDeGuardar(r, volverAInicio) {
   if (r.estado === 'ok') await cargarEstado();
 }
 
+// Lo que se escribe en un formulario queda en memoria y se repone si la pantalla se redibuja
+// (por ejemplo, al confirmarse una operación pendiente). Así no se pierde un gasto en preparación.
+function guardarCampo(el) {
+  if (!el.id || el.id === 'q-con' || !el.closest('#app') || !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  const p = pantalla(); p.campos = p.campos || {};
+  p.campos[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+}
+function reponerBorrador(p) {
+  if (!p.campos) return;
+  Object.keys(p.campos).forEach(id => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = p.campos[id]; else el.value = p.campos[id]; });
+}
+document.addEventListener('change', ev => guardarCampo(ev.target));
 document.addEventListener('input', ev => {
+  guardarCampo(ev.target);
+  if (ev.target.id === 'rep-txt' && S.reporte) { S.reporte.texto = ev.target.value; return; }
   if (ev.target.id === 'q-con') {
     const p = pantalla(); p.q = ev.target.value;
     const q = norm(p.q), lista = consCat(p.catId);
