@@ -97,7 +97,7 @@ button { font-family:inherit; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 1;
+window.APP_VERSION = 2;
 const S = window.SEBA, PREFIJO = S.prefijo;
 document.getElementById('btnVolver').href = 'balance.html?p=' + PREFIJO;
 document.getElementById('headerSub').textContent = 'Deudas · ' + PREFIJO;
@@ -180,9 +180,25 @@ function abrirModal(titulo, html) {
 function cerrarModal(desdeAtras) {
     const m = document.getElementById('modal'); if (!m.classList.contains('open')) return;
     m.classList.remove('open');
+    if (borrM) { borrM.soltar(); borrM = null; }
     if (!desdeAtras && history.state && history.state.seba === 'modal') history.back();
 }
 window.addEventListener('popstate', () => cerrarModal(true));
+function closeSinHistoria() { /* el modal sigue abierto: solo se vuelve a dibujar su contenido */ }
+// Regla de oro: cada formulario se guarda en este celular mientras se escribe (también las cuentas elegidas
+// y el número de operación, para que un reintento después de recargar no duplique).
+let borrM = null;
+function activarBorrador(nombre, extra, alRestaurar, reabrir) {
+    borrM = S.borrador(nombre, '#modalCuerpo', { extra, alRestaurar });
+    if (borrM.restaurar()) {
+        S.toast('📝 Recuperé lo que estabas cargando', 'verde');
+        const b = document.createElement('button'); b.className = 'btn-secundario'; b.textContent = '🗑 Empezar de cero';
+        b.onclick = () => { if (!confirm('¿Borrar lo que habías escrito?')) return; borrM.borrar(); borrM = null; reabrir(); };
+        document.getElementById('modalCuerpo').appendChild(b);
+    }
+}
+function guardarBorrador() { if (borrM) borrM.guardar(); }
+function terminarBorrador() { if (borrM) { borrM.borrar(); borrM = null; } }
 function botonesCuenta(cont, sel, fn) {
     return cuentasAct().map(c => '<button class="btn-metodo' + (c.codigo === sel ? ' activo' : '') + '" onclick="' + fn + '(\'' + c.codigo + '\')">' + S.esc(c.nombre) + '</button>').join('');
 }
@@ -218,16 +234,17 @@ function nuevaDeuda() {
         '<div id="ndCuentas" style="display:none;"><div class="metodos-pago" id="ndCtaBtns"></div></div>' +
         '<div class="ayuda" id="ndAyuda"></div><div class="error-msg" id="ndError"></div><button class="btn-primario" id="ndBtn" onclick="guardarDeuda()">Guardar deuda</button>');
     ndAyuda();
+    activarBorrador('deuda_nueva', () => nd, x => { nd = x; ndSentido(nd.sentido); ndMover(nd.mover); }, () => { closeSinHistoria(); nuevaDeuda(); });
 }
 function ndSentido(s) {
     nd.sentido = s;
     document.getElementById('ndDebo').classList.toggle('activo', s === 'DEBO'); document.getElementById('ndMe').classList.toggle('activo', s !== 'DEBO');
     document.getElementById('ndPersonaLbl').textContent = s === 'DEBO' ? '¿A quién le debés?' : '¿Quién te debe?';
     document.getElementById('ndMoverTxt').textContent = s === 'DEBO' ? 'Me prestaron plata (entra a una cuenta)' : 'Presté plata (sale de una cuenta)';
-    ndAyuda();
+    ndAyuda(); guardarBorrador();
 }
 function ndMover(v) { nd.mover = v; document.getElementById('ndCuentas').style.display = v ? 'block' : 'none'; ndCta(nd.cuenta); ndAyuda(); }
-function ndCta(c) { nd.cuenta = c; document.getElementById('ndCtaBtns').innerHTML = botonesCuenta('', c, 'ndCta'); }
+function ndCta(c) { nd.cuenta = c; document.getElementById('ndCtaBtns').innerHTML = botonesCuenta('', c, 'ndCta'); guardarBorrador(); }
 function ndAyuda() {
     const t = nd.sentido === 'DEBO'
         ? (nd.mover ? 'Te prestaron dinero: entra a la cuenta elegida. Cuando lo devuelvas, registrás el pago y sale de la cuenta.' : 'Compraste algo fiado o quedaste debiendo: no cambia tus cuentas hasta que pagues.')
@@ -247,8 +264,8 @@ async function guardarDeuda() {
     const btn = document.getElementById('ndBtn'); btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
     const r = await enviarOp({ accion: 'crearDeuda', datos, id: nd.opId, etiqueta: 'Deuda ' + (nd.sentido === 'DEBO' ? 'con ' : 'de ') + persona.toUpperCase() + ' ' + S.fmt(imp) });
     btn.disabled = false; btn.textContent = 'Guardar deuda';
-    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrada' : '✅ Deuda registrada', 'verde'); filtroD = 'ABIERTAS'; cargar(); return; }
-    if (r && r.definitivo) { nd.opId = S.nuevoOpId(); err.textContent = '❌ ' + r.error; return; }
+    if (r && r.success) { terminarBorrador(); cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrada' : '✅ Deuda registrada', 'verde'); filtroD = 'ABIERTAS'; cargar(); return; }
+    if (r && r.definitivo) { nd.opId = S.nuevoOpId(); guardarBorrador(); err.textContent = '❌ ' + r.error; return; }
     fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Guardar de nuevo (no se duplica).');
 }
 function verDeuda(id) {
@@ -275,8 +292,9 @@ function pagarDeuda(id) {
         '<div class="form-grupo"><label class="form-label">Fecha</label><input type="date" class="form-input" id="pgFecha" value="' + S.hoy() + '"></div>' +
         '<div class="error-msg" id="pgError"></div><button class="btn-primario" id="pgBtn" onclick="confirmarPago()">Confirmar</button>');
     pgCta(pg.cuenta);
+    activarBorrador('pago_' + id, () => ({ cuenta: pg.cuenta, movId: pg.movId }), x => { pg.movId = x.movId; pgCta(x.cuenta); }, () => { closeSinHistoria(); pagarDeuda(id); });
 }
-function pgCta(c) { pg.cuenta = c; document.getElementById('pgCtas').innerHTML = botonesCuenta('', c, 'pgCta'); }
+function pgCta(c) { pg.cuenta = c; document.getElementById('pgCtas').innerHTML = botonesCuenta('', c, 'pgCta'); guardarBorrador(); }
 async function confirmarPago() {
     if (enviando || hayPendiente(pg.movId)) return;
     const err = document.getElementById('pgError'), imp = S.leerImporte(document.getElementById('pgImporte').value), fecha = document.getElementById('pgFecha').value;
@@ -286,8 +304,8 @@ async function confirmarPago() {
     const btn = document.getElementById('pgBtn'); btn.disabled = true; btn.textContent = '⏳ Registrando...'; err.textContent = '';
     const r = await enviarOp({ accion: 'pagarDeuda', datos: { movId: pg.movId, deudaId: pg.deudaId, importe: imp, cuenta: pg.cuenta, fecha }, id: pg.movId, etiqueta: (pg.d.sentido === 'DEBO' ? 'Pago a ' : 'Cobro de ') + pg.d.persona + ' ' + S.fmt(imp) });
     btn.disabled = false; btn.textContent = 'Confirmar';
-    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Registrado · queda ' + S.fmt(r.pendiente || 0), 'verde', 3500); cargar(); return; }
-    if (r && r.definitivo) { pg.movId = S.nuevoMovId(); err.textContent = '❌ ' + r.error; return; }
+    if (r && r.success) { terminarBorrador(); cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Registrado · queda ' + S.fmt(r.pendiente || 0), 'verde', 3500); cargar(); return; }
+    if (r && r.definitivo) { pg.movId = S.nuevoMovId(); guardarBorrador(); err.textContent = '❌ ' + r.error; return; }
     fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Confirmar de nuevo (no se duplica).');
 }
 async function anularPago(movId) {
@@ -335,9 +353,10 @@ function verCompromiso(id) {
         '<button class="btn-secundario" onclick="formCompromiso(\'' + c.id + '\')">✎ Editar compromiso</button>');
     cp = { cuenta: cuentasAct().some(x => x.codigo === c.cuentaSugerida) ? c.cuentaSugerida : (cuentasAct()[0] || {}).codigo || '', movId: S.nuevoMovId() };
     cpCta(cp.cuenta);
+    activarBorrador('pagocomp_' + id + '_' + c.periodo, () => ({ cuenta: cp.cuenta, movId: cp.movId }), x => { cp.movId = x.movId; cpCta(x.cuenta); }, () => { closeSinHistoria(); verCompromiso(id); });
 }
 let cp = {};
-function cpCta(c) { cp.cuenta = c; document.getElementById('cpCtas').innerHTML = botonesCuenta('', c, 'cpCta'); }
+function cpCta(c) { cp.cuenta = c; document.getElementById('cpCtas').innerHTML = botonesCuenta('', c, 'cpCta'); guardarBorrador(); }
 async function pagarCompromiso(id) {
     if (enviando || hayPendiente(cp.movId)) return;
     const c = comp.compromisos.find(x => x.id === id), err = document.getElementById('cpError');
@@ -349,8 +368,8 @@ async function pagarCompromiso(id) {
     const datos = { movId: cp.movId, tipo: 'GASTO', fecha, cuenta: cp.cuenta, compromisoId: c.id, periodo: c.periodo, items: [{ codigo: c.codigo, importe: imp, descripcion: c.nombre + ' ' + c.periodo }] };
     const r = await enviarOp({ accion: 'registrarBoleta', datos, id: cp.movId, etiqueta: 'Pago de ' + c.nombre + ' ' + S.fmt(imp) });
     btn.disabled = false; btn.textContent = '💸 Registrar pago';
-    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Pago registrado como gasto', 'verde'); cargar(); return; }
-    if (r && r.definitivo) { cp.movId = S.nuevoMovId(); err.textContent = '❌ ' + r.error; return; }
+    if (r && r.success) { terminarBorrador(); cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Pago registrado como gasto', 'verde'); cargar(); return; }
+    if (r && r.definitivo) { cp.movId = S.nuevoMovId(); guardarBorrador(); err.textContent = '❌ ' + r.error; return; }
     fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Registrar de nuevo (no se duplica).');
 }
 let fc = {};
@@ -368,8 +387,9 @@ function formCompromiso(id) {
         (t ? '<label class="check"><input type="checkbox" id="fcActivo"' + (t.activo ? ' checked' : '') + '> Activo</label>' : '') +
         '<div class="error-msg" id="fcError"></div><button class="btn-primario" id="fcBtn" onclick="guardarCompromiso()">Guardar</button>');
     document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta');
+    activarBorrador('compromiso_' + (id || 'nuevo'), () => fc, x => { fc = x; document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta'); }, () => { closeSinHistoria(); formCompromiso(id); });
 }
-function fcCta(c) { fc.cuenta = fc.cuenta === c && c ? '' : c; document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta'); }
+function fcCta(c) { fc.cuenta = fc.cuenta === c && c ? '' : c; document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta'); guardarBorrador(); }
 async function guardarCompromiso() {
     if (enviando) return;
     const err = document.getElementById('fcError'), nombre = document.getElementById('fcNombre').value.trim(), codigo = document.getElementById('fcCodigo').value;
@@ -383,13 +403,27 @@ async function guardarCompromiso() {
     const datos = { nombre, codigo, estimado: est, diaVence: dia, cuentaSugerida: fc.cuenta || '' };
     const r = fc.id ? await S.api('editarCompromiso', Object.assign(datos, { id: fc.id, activo: document.getElementById('fcActivo').checked })) : await S.api('crearCompromiso', Object.assign(datos, { opId: fc.opId }));
     enviando = false; btn.disabled = false; btn.textContent = 'Guardar';
-    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde'); cargarComp(); return; }
-    if (r && r.definitivo && !fc.id) fc.opId = S.nuevoOpId();
+    if (r && r.success) { terminarBorrador(); cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde'); cargarComp(); return; }
+    if (r && r.definitivo && !fc.id) { fc.opId = S.nuevoOpId(); guardarBorrador(); }
     err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).');
 }
 
+// Si la página se cerró con un formulario a medio cargar, se vuelve a abrir solo.
+function reabrirBorrador() {
+    if (opPendiente()) return;
+    const pre = 'seba_borrador_' + PREFIJO + '_';
+    let mejor = null;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!k.startsWith(pre)) continue; const v = S.ls.get(k); if (v && (!mejor || v.cuando > mejor.cuando)) mejor = { k: k.slice(pre.length), cuando: v.cuando }; } } catch (e) {}
+    if (!mejor) return;
+    const k = mejor.k;
+    if (k === 'deuda_nueva') { irPestana('deudas'); nuevaDeuda(); }
+    else if (k.startsWith('pago_')) { const id = k.slice(5); if (deudas.some(d => d.id === id && (d.estado === 'PENDIENTE' || d.estado === 'PARCIAL'))) { irPestana('deudas'); pagarDeuda(id); } else S.ls.del(pre + k); }
+    else if (k === 'compromiso_nuevo') { irPestana('compromisos'); formCompromiso(); }
+    else if (k.startsWith('compromiso_')) { const id = k.slice(11); if (comp.todos.some(t => t.id === id)) { irPestana('compromisos'); formCompromiso(id); } }
+    else if (k.startsWith('pagocomp_')) { const [, id, per] = k.match(/^pagocomp_(.+)_(\d{4}-\d{2})$/) || []; if (id && per === periodo && comp.compromisos.some(c => c.id === id && c.estado !== 'PAGADO')) { irPestana('compromisos'); verCompromiso(id); } }
+}
 render();
-cargar().then(verificarPendiente);
+cargar().then(verificarPendiente).then(() => { if (estado) reabrirBorrador(); });
 </script>
 </body>
 </html>

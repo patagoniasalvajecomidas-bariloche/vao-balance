@@ -1,917 +1,947 @@
-/** @OnlyCurrentDoc */
-// ===============================================================
-// 🟦 PROYECTO: VAO BALANCE V1 — STAGING  (backend build 3: + reportes de problemas)
-// 📊 Planilla: VAO_BALANCE_TEST  (copia de VAO_BALANCE_BASE, solo pruebas)
-//    Este script debe estar VINCULADO a esa planilla.
+// ===============================
+// 🟩 PROYECTO: SEBA BALANCE — STAGING
+// 🧩 Arquitectura: 1 planilla, multihojas por cliente (igual que VAO POS)
+// 🎯 Origen: esqueleto de VAO POS Code v023 (admin, PIN, sesiones, vigencia,
+//    candado + ID de operación) adaptado a finanzas: gasto/ingreso en lugar de producto.
+// 📊 Planilla: SEBA_BALANCE_STAGING (este script va VINCULADO a ella)
 // 📁 Repo: github.com/patagoniasalvajecomidas-bariloche/vao-balance
-// 🌐 App: vao-balance.vercel.app
-// ⚠️ SISTEMA DE PRUEBAS — NO PRODUCCIÓN — DATOS DEMO
-// ⚠️ Independiente de Almacén Copihue, VAO POS y SmartPOS:
-//    no usa ni conoce sus planillas, scripts ni credenciales.
-// ===============================================================
+// ⚠️ ESTE ES EL SISTEMA DE PRUEBAS — NO PRODUCCIÓN
+// ⚠️ Independiente de VAO POS, Copihue y SmartPOS: no usa sus planillas ni scripts.
+// ===============================
 //
-// FUNCIONES PARA EJECUTAR A MANO DESDE EL EDITOR (▶ Ejecutar):
-//   inicializarTest()   → prepara VAO_BALANCE_TEST (se puede repetir sin riesgo)
-//   crearAcceso()       → crea un enlace de acceso nuevo (uno por persona)
-//   diagnostico()       → revisa vinculación, hojas, accesos y datos
-//   reiniciarTest()     → BORRA los datos de prueba (solo en TEST) para empezar de cero
+// FUNCIONES PARA EJECUTAR A MANO (▶ Ejecutar en el editor):
+//   instalar()            → revisa/crea las hojas globales (se puede repetir)
+//   generarClaveAdmin()   → crea una clave admin AL AZAR y la muestra UNA vez en el registro
+//   diagnostico()         → estado general
 //
-// API (POST texto JSON: {accion, clave, op_id, datos}):
-//   lectura : ping, sesion, estado, movimientos, compromisosMes, verificarOperacion
-//   escritura (con candado + op_id): elegirPerfil, registrarMovimiento,
-//     registrarTransferencia, anularMovimiento, crearDeuda, pagarDeuda, anularDeuda,
-//     crearCategoria, editarCategoria, crearConcepto, editarConcepto,
-//     crearCuenta, editarCuenta, crearCompromiso, editarCompromiso
+// HOJAS GLOBALES: CLIENTES, PERFILES, PLANTILLA_CATALOGO, PLANTILLA_CUENTAS, INCIDENCIAS
+// HOJAS POR CLIENTE (XX = prefijo): CATALOGO_XX, MOVIMIENTOS_XX, CUENTAS_XX,
+//   DEUDAS_XX, COMPROMISOS_XX, CONFIG_XX
 //
-// CERO HARDCODE COMERCIAL: solo hay constantes TÉCNICAS (hojas, columnas,
-// tipos, reglas). Categorías, conceptos, cuentas e importes vienen de la planilla.
-// ===============================================================
+// CERO HARDCODE COMERCIAL: categorías, conceptos, precios y cuentas viven en la planilla.
+// Respuestas: {success:true,...} | {success:false, definitivo:true, error} (rechazo seguro: no se escribió nada)
+//             | {error, ocupado|sesion} (no definitivo: el celular conserva la operación y reintenta)
+// ===============================
 
-const PRODUCTO = 'VAO BALANCE V1 STAGING';
-const BACKEND_BUILD = 3;
-const ENTORNO = 'STAGING';
-const TZ_DEFECTO = 'America/Argentina/Buenos_Aires';
-const MARCA_TEST = 'VAO_BALANCE_TEST';      // la planilla de escritura debe llamarse así
-const PROP_TEST_ID = 'VB_PLANILLA_TEST_ID';  // la fija inicializarTest()
-
-const H = {
-  CONFIG: 'CONFIG', PERFILES: 'PERFILES', P_CUENTAS: 'PLANTILLA_CUENTAS', P_CATEGORIAS: 'PLANTILLA_CATEGORIAS',
-  P_CONCEPTOS: 'PLANTILLA_CONCEPTOS', CUENTAS: 'CUENTAS', CATEGORIAS: 'CATEGORIAS', CONCEPTOS: 'CONCEPTOS',
-  MOVIMIENTOS: 'MOVIMIENTOS', DEUDAS: 'DEUDAS', COMPROMISOS: 'COMPROMISOS', USUARIOS: 'USUARIOS', CONTROL: 'CONTROL',
-  INCIDENCIAS: 'INCIDENCIAS'
+var SISTEMA = {
+  proyecto: 'SEBA BALANCE',
+  entorno: 'staging',
+  version: 'v002',
+  arquitectura: '1 planilla, multihojas por cliente',
+  origen: 'VAO POS Code v023'
 };
+var TZ = 'America/Argentina/Buenos_Aires';
 
-// Columnas que deben existir (las de BASE + las que agrega inicializarTest)
-const COLS = {
-  CONFIG: ['clave', 'valor'],
-  PERFILES: ['perfil_id', 'nombre', 'emoji', 'descripcion', 'orden', 'activo'],
-  PLANTILLA_CUENTAS: ['plantilla_id', 'perfil_id', 'nombre', 'tipo', 'orden', 'activo'],
-  PLANTILLA_CATEGORIAS: ['plantilla_id', 'perfil_id', 'nombre', 'tipo', 'emoji', 'color', 'orden', 'activo'],
-  PLANTILLA_CONCEPTOS: ['plantilla_id', 'perfil_id', 'plantilla_categoria_id', 'nombre', 'importe_sugerido', 'orden', 'activo'],
-  CUENTAS: ['id', 'nombre', 'tipo', 'saldo_inicial', 'fecha_saldo_inicial', 'color', 'orden', 'activo', 'origen_plantilla_id', 'fecha_alta', 'op_id'],
-  CATEGORIAS: ['id', 'nombre', 'tipo', 'emoji', 'color', 'orden', 'activo', 'origen_plantilla_id', 'fecha_alta', 'op_id'],
-  CONCEPTOS: ['id', 'categoria_id', 'nombre', 'importe_sugerido', 'cuenta_sugerida_id', 'orden', 'activo', 'origen_plantilla_id', 'fecha_alta', 'op_id'],
-  MOVIMIENTOS: ['id', 'op_id', 'fecha_operacion', 'fecha_registro', 'tipo', 'categoria_id', 'categoria_nombre', 'concepto_id',
-    'concepto_nombre', 'cuenta_id', 'cuenta_destino_id', 'importe', 'descripcion', 'deuda_id', 'compromiso_id', 'periodo',
-    'estado', 'motivo_anulacion', 'usuario', 'fecha_anulacion', 'anulado_por'],
-  DEUDAS: ['id', 'sentido', 'contraparte', 'descripcion', 'importe_original', 'fecha', 'vencimiento', 'estado', 'fecha_alta',
-    'op_id', 'usuario', 'motivo_anulacion'],
-  COMPROMISOS: ['id', 'nombre', 'categoria_id', 'concepto_id', 'importe_estimado', 'dia_vencimiento', 'cuenta_sugerida_id',
-    'activo', 'op_id', 'fecha_alta'],
-  USUARIOS: ['usuario_id', 'nombre', 'clave_hash', 'activo', 'creado', 'ultimo_acceso'],
-  INCIDENCIAS: ['id', 'fecha_servidor', 'estado', 'tipo', 'descripcion', 'pantalla', 'version_app', 'version_backend',
-    'perfil', 'usuario', 'navegador', 'op_id', 'notas_revision', 'fecha_cambio_estado']
+var COLS = {
+  CLIENTES: ['Prefijo', 'Nombre', 'Contacto', 'Telefono', 'Correo', 'Perfil', 'Estado', 'FechaAlta', 'FechaVence', 'Observaciones'],
+  PERFILES: ['PerfilId', 'Nombre', 'Descripcion', 'Orden', 'Activo'],
+  PLANTILLA_CATALOGO: ['PerfilId', 'Tipo', 'Categoria', 'Concepto', 'PrecioSugerido', 'Orden', 'Activo'],
+  PLANTILLA_CUENTAS: ['PerfilId', 'Cuenta', 'TipoCuenta', 'Orden', 'Activo'],
+  INCIDENCIAS: ['Id', 'FechaServidor', 'Estado', 'Prefijo', 'Tipo', 'Descripcion', 'Pantalla', 'VersionApp', 'Navegador', 'OpId', 'NotasRevision'],
+  CATALOGO: ['Codigo', 'Concepto', 'Categoria', 'Tipo', 'PrecioSugerido', 'Activo', 'Orden', 'FechaAlta', 'OpId'],
+  MOVIMIENTOS: ['FechaRegistro', 'FechaOperacion', 'Tipo', 'Categoria', 'Concepto', 'Codigo', 'Descripcion', 'Importe',
+                'Cuenta', 'CuentaDestino', 'MovId', 'Renglon', 'Estado', 'MotivoAnulacion', 'DeudaId', 'CompromisoId', 'Periodo', 'FechaAnulacion'],
+  CUENTAS: ['Codigo', 'Cuenta', 'TipoCuenta', 'SaldoInicial', 'Activo', 'Orden', 'FechaAlta', 'OpId'],
+  DEUDAS: ['DeudaId', 'Sentido', 'Persona', 'Telefono', 'Descripcion', 'Importe', 'Fecha', 'Vence', 'Estado', 'OpId', 'MotivoAnulacion'],
+  COMPROMISOS: ['CompromisoId', 'Nombre', 'CodigoConcepto', 'ImporteEstimado', 'DiaVence', 'CuentaSugerida', 'Activo', 'OpId'],
+  CONFIG: ['campo', 'valor', 'notas']
 };
-const TIPOS_INCIDENCIA = ['ERROR', 'SUGERENCIA'];
-const ESTADOS_INCIDENCIA = ['NUEVO', 'EN REVISIÓN', 'RESUELTO', 'DESCARTADO'];
-const COLS_IMPORTE = ['saldo_inicial', 'importe', 'importe_original', 'importe_estimado', 'importe_sugerido'];
-const TIPOS_CAT = ['EGRESO', 'INGRESO'];
-const TIPOS_CUENTA = ['EFECTIVO', 'BANCO', 'BILLETERA', 'OTRA'];
-const SENTIDOS = ['DEBO', 'ME_DEBEN'];
-const CONFIG_PUBLICA = ['nombre_cliente', 'perfil_inicial', 'moneda', 'zona_horaria', 'top_cantidad', 'version_esquema', 'entorno'];
-const MAX_IMPORTE = 1e12;
+var TIPOS = ['GASTO', 'INGRESO'];
+var TIPOS_CUENTA = ['EFECTIVO', 'BANCO', 'BILLETERA', 'TARJETA', 'OTRA'];
+var ESTADOS_INCIDENCIA = ['NUEVO', 'EN REVISIÓN', 'RESUELTO', 'DESCARTADO'];
 
-// ===============================================================
-// ENTRADAS WEB
-// ===============================================================
+// ===============================
+// ENTRADA WEB (mismo esquema que VAO POS: ?action=&prefijo=&data=)
+// ===============================
 function doGet(e) {
-  // Solo diagnóstico público, sin datos.
-  return _json(_ping());
+  var p = (e && e.parameter) || {};
+  var action = p.action || '';
+  var prefijo = String(p.prefijo || '').trim().toUpperCase();
+  var data = {};
+  var result;
+  try {
+    data = p.data ? JSON.parse(p.data) : {};
+  } catch (x) {
+    try { data = JSON.parse(decodeURIComponent(p.data)); } catch (y) { return respuestaJSON({ error: 'Datos inválidos', definitivo: true, success: false }); }
+  }
+  try {
+    var t = data.token || '';
+    // ── públicas (sin datos privados) ──
+    if (action === 'getInfo') result = getInfo();
+    else if (action === 'clienteLogin') result = clienteLogin(data);
+    else if (action === 'adminLogin') result = adminLogin(data);
+    else if (action === 'cerrarSesion') result = cerrarSesionCliente(prefijo, t);
+    else if (action === 'cerrarSesionAdmin') result = cerrarSesionAdmin(t);
+    // ── cliente (requieren sesión de ESE prefijo) ──
+    else if (ACCIONES_CLIENTE[action]) {
+      var err = _requiereSesionValida_(prefijo, t);
+      if (err) result = { error: err, sesion: true };
+      else result = ACCIONES_CLIENTE[action](prefijo, data);
+    }
+    // ── admin ──
+    else if (ACCIONES_ADMIN[action]) {
+      if (!validarSesionAdmin(t)) result = { error: 'Sesión admin inválida o expirada', sesion: true };
+      else result = ACCIONES_ADMIN[action](data);
+    }
+    else result = { error: 'Acción no reconocida: ' + action, success: false, definitivo: true };
+  } catch (err2) {
+    result = { error: err2.message };
+  }
+  return respuestaJSON(result);
 }
 
+// POST (para boletas largas que no entran en una URL): mismo ruteo que doGet.
 function doPost(e) {
-  let res;
-  try {
-    let req;
-    try { req = JSON.parse((e && e.postData && e.postData.contents) || '{}'); }
-    catch (x) { return _json(_err('PEDIDO_INVALIDO', 'El pedido no es JSON válido')); }
-    const accion = String(req.accion || '');
-    if (accion === 'ping') return _json(_ping());
+  var b = {};
+  try { b = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (x) { return respuestaJSON({ error: 'Datos inválidos', definitivo: true, success: false }); }
+  return doGet({ parameter: { action: String(b.action || ''), prefijo: String(b.prefijo || ''), data: JSON.stringify(b.data || {}) } });
+}
 
-    const usuario = _autenticar(req.clave);            // lanza CLAVE_INVALIDA
-    const d = req.datos || {};
-    const LECTURA = {
-      sesion: () => _ok({ usuario: { id: usuario.usuario_id, nombre: usuario.nombre }, entorno: ENTORNO, producto: PRODUCTO }),
-      estado: () => apiEstado(d, usuario),
-      movimientos: () => apiMovimientos(d),
-      compromisosMes: () => apiCompromisosMes(d),
-      verificarOperacion: () => apiVerificarOperacion(req.op_id)
-    };
-    const ESCRITURA = {
-      elegirPerfil: apiElegirPerfil, registrarMovimiento: apiRegistrarMovimiento,
-      registrarTransferencia: apiRegistrarTransferencia, anularMovimiento: apiAnularMovimiento,
-      crearDeuda: apiCrearDeuda, pagarDeuda: apiPagarDeuda, anularDeuda: apiAnularDeuda,
-      crearCategoria: apiCrearCategoria, editarCategoria: apiEditarCategoria,
-      crearConcepto: apiCrearConcepto, editarConcepto: apiEditarConcepto,
-      crearCuenta: apiCrearCuenta, editarCuenta: apiEditarCuenta,
-      crearCompromiso: apiCrearCompromiso, editarCompromiso: apiEditarCompromiso,
-      reportarIncidencia: apiReportarIncidencia
-    };
-    if (LECTURA[accion]) res = LECTURA[accion]();
-    else if (ESCRITURA[accion]) {
-      _verificarEscritura();
-      const opId = _opId(req.op_id);
-      res = _conCandado(() => ESCRITURA[accion](d, usuario, opId));
-    } else res = _err('ACCION_DESCONOCIDA', 'Acción no reconocida: ' + accion);
-  } catch (err) {
-    res = _err(err.codigo || 'ERROR_INTERNO', err.message || String(err), err.extra);
+var ACCIONES_CLIENTE = {
+  getConfig: function (px) { return getConfig(px); },
+  getEstado: function (px, d) { return getEstado(px, d); },
+  getMovimientos: function (px, d) { return getMovimientos(px, d); },
+  registrarBoleta: function (px, d) { return _conCandado_(function () { return registrarBoleta(px, d); }); },
+  registrarTransferencia: function (px, d) { return _conCandado_(function () { return registrarTransferencia(px, d); }); },
+  anularMovimiento: function (px, d) { return _conCandado_(function () { return anularMovimiento(px, d); }); },
+  crearConcepto: function (px, d) { return _conCandado_(function () { return crearConcepto(px, d); }); },
+  editarConcepto: function (px, d) { return _conCandado_(function () { return editarConcepto(px, d); }); },
+  crearCuenta: function (px, d) { return _conCandado_(function () { return crearCuenta(px, d); }); },
+  editarCuenta: function (px, d) { return _conCandado_(function () { return editarCuenta(px, d); }); },
+  getDeudas: function (px) { return getDeudas(px); },
+  crearDeuda: function (px, d) { return _conCandado_(function () { return crearDeuda(px, d); }); },
+  pagarDeuda: function (px, d) { return _conCandado_(function () { return pagarDeuda(px, d); }); },
+  anularDeuda: function (px, d) { return _conCandado_(function () { return anularDeuda(px, d); }); },
+  getCompromisos: function (px, d) { return getCompromisos(px, d); },
+  crearCompromiso: function (px, d) { return _conCandado_(function () { return crearCompromiso(px, d); }); },
+  editarCompromiso: function (px, d) { return _conCandado_(function () { return editarCompromiso(px, d); }); },
+  reportarIncidencia: function (px, d) { return _conCandado_(function () { return reportarIncidencia(px, d); }); },
+  verificarOperacion: function (px, d) { return verificarOperacion(px, d); }
+};
+var ACCIONES_ADMIN = {
+  getResumenAdmin: function () { return getResumenAdmin(); },
+  getPerfiles: function () { return getPerfiles(); },
+  crearCliente: function (d) { return _conCandado_(function () { return crearCliente(d); }); },
+  activarCliente: function (d) { return _setEstadoCliente_(d.prefijo, 'ACTIVO'); },
+  suspenderCliente: function (d) { return _setEstadoCliente_(d.prefijo, 'SUSPENDIDO'); },
+  resetPin: function (d) { return resetPinCliente(d); },
+  renovarVigencia: function (d) { return renovarVigenciaCliente(d); },
+  getIncidencias: function (d) { return getIncidencias(d); }
+};
+
+function getInfo() {
+  return { ok: true, sistema: SISTEMA, planillaVinculada: !!SpreadsheetApp.getActiveSpreadsheet(), fechaConsulta: _ahora_() };
+}
+
+// ===============================
+// HELPERS (de VAO POS)
+// ===============================
+function respuestaJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+function _parseNumeroFlexible(valor) {
+  if (valor === null || valor === undefined || valor === '') return 0;
+  if (typeof valor === 'number') return isNaN(valor) ? 0 : valor;
+  if (typeof valor !== 'string') return 0;
+  var texto = valor.trim();
+  if (texto === '') return 0;
+  texto = texto.replace(/[^0-9.,-]/g, '');
+  if (texto === '' || texto === '-') return 0;
+  var tieneComa = texto.indexOf(',') !== -1, tienePunto = texto.indexOf('.') !== -1;
+  if (tieneComa && tienePunto) texto = texto.replace(/\./g, '').replace(',', '.');
+  else if (tieneComa) texto = texto.replace(',', '.');
+  else if (tienePunto) {
+    var partes = texto.split('.');
+    if (partes.length === 2 && partes[1].length === 3) texto = texto.replace('.', '');
   }
-  return _json(res);
+  var n = parseFloat(texto);
+  return isNaN(n) ? 0 : n;
 }
-
-function _ping() {
-  return _ok({ servicio: 'VAO BALANCE', producto: PRODUCTO, entorno: ENTORNO, build: BACKEND_BUILD,
-    planilla_vinculada: !!SpreadsheetApp.getActiveSpreadsheet(), hora_servidor: _ahora() });
+function _esActivoFlag_(valor) {
+  if (valor === true) return true;
+  if (typeof valor !== 'string') return false;
+  return ['SI', 'SÍ', 'TRUE', 'VERDADERO', 'X', '1'].indexOf(valor.trim().toUpperCase()) !== -1;
 }
-
-// ===============================================================
-// LECTURA
-// ===============================================================
-function apiEstado(d, usuario) {
-  const cfg = _config();
-  const cuentas = _tabla(H.CUENTAS).filas, cats = _tabla(H.CATEGORIAS).filas, cons = _tabla(H.CONCEPTOS).filas;
-  const movs = _tabla(H.MOVIMIENTOS).filas, deudas = _tabla(H.DEUDAS).filas, comps = _tabla(H.COMPROMISOS).filas;
-  const calc = _calcular(cuentas, movs, deudas);
-  const periodo = _periodoValido(d.periodo) ? d.periodo : _hoy().slice(0, 7);
-
-  const res = {
-    usuario: { id: usuario.usuario_id, nombre: usuario.nombre },
-    producto: PRODUCTO, entorno: ENTORNO, build: BACKEND_BUILD, hoy: _hoy(),
-    config: cfg.publica,
-    perfil: null, perfiles: [],
-    cuentas: cuentas.map(c => ({ id: _t(c.id), nombre: _t(c.nombre), tipo: _t(c.tipo), saldo_inicial: _n(c.saldo_inicial),
-      saldo: _c2p(calc.saldos[_t(c.id)] || 0), activo: _act(c.activo), orden: _ord(c.orden) })).sort(_porOrden),
-    total: 0,
-    mes: { periodo: periodo, ingresos: 0, gastos: 0 },
-    categorias: cats.map(c => ({ id: _t(c.id), nombre: _t(c.nombre), tipo: _t(c.tipo), emoji: _t(c.emoji), color: _t(c.color),
-      orden: _ord(c.orden), activo: _act(c.activo), uso: calc.usoCat[_t(c.id)] || 0 })).sort(_porOrden),
-    conceptos: cons.map(c => ({ id: _t(c.id), categoria_id: _t(c.categoria_id), nombre: _t(c.nombre),
-      importe_sugerido: _impONull(c.importe_sugerido), cuenta_sugerida_id: _t(c.cuenta_sugerida_id),
-      orden: _ord(c.orden), activo: _act(c.activo), uso: calc.usoCon[_t(c.id)] || 0 })).sort(_porOrden),
-    compromisos: comps.map(_compromisoPublico).sort(_porNombre),
-    compromisosMes: _compromisosDelMes(comps, movs, periodo),
-    deudas: _deudasConSaldo(deudas, movs),
-    ultimos: _movsPublicos(movs).slice(0, 5),
-    advertencias: calc.advertencias
-  };
-  res.total = _c2p(res.cuentas.reduce((s, c) => s + _p2c(c.saldo), 0));
-  movs.forEach(m => {
-    if (_t(m.estado) !== 'ACTIVO' || _fecha(m.fecha_operacion).slice(0, 7) !== periodo) return;
-    if (m.tipo === 'INGRESO') res.mes.ingresos += _p2c(m.importe);
-    if (m.tipo === 'EGRESO') res.mes.gastos += _p2c(m.importe);
-  });
-  res.mes.ingresos = _c2p(res.mes.ingresos); res.mes.gastos = _c2p(res.mes.gastos);
-
-  const pid = _t(cfg.todo.perfil_inicial).toUpperCase();
-  const perfiles = _tabla(H.PERFILES).filas.filter(p => _act(p.activo))
-    .map(p => ({ id: _t(p.perfil_id), nombre: _t(p.nombre), emoji: _t(p.emoji), descripcion: _t(p.descripcion), orden: _ord(p.orden) }))
-    .sort(_porOrden);
-  res.perfil = perfiles.filter(p => p.id.toUpperCase() === pid)[0] || null;
-  if (!cats.length) res.perfiles = perfiles;   // catálogo vacío → hay que elegir perfil
-  return _ok(res);
+function _t(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
+function _ahora_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'); }
+function _hoy_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+function _fechaTxt_(v) { return (v instanceof Date) ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : _t(v); }
+function _cent(v) { return Math.round(_parseNumeroFlexible(v) * 100); }
+function _pesos(c) { return Math.round(c) / 100; }
+function _def(msg) { return { success: false, definitivo: true, error: msg }; }
+function _fechaValida_(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(_t(s))) return false;
+  var p = s.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2]);
+  return d.getFullYear() === p[0] && d.getMonth() === p[1] - 1 && d.getDate() === p[2] && p[0] >= 2000 && p[0] <= 2100;
 }
-
-function apiMovimientos(d) {
-  const desde = _fechaValida(d.desde) ? d.desde : '';
-  const hasta = _fechaValida(d.hasta) ? d.hasta : '';
-  const lista = _movsPublicos(_tabla(H.MOVIMIENTOS).filas).filter(m =>
-    (!desde || m.fecha_operacion >= desde) && (!hasta || m.fecha_operacion <= hasta) &&
-    (!d.cuenta_id || m.cuenta_id === d.cuenta_id || m.cuenta_destino_id === d.cuenta_id) &&
-    (!d.tipo || m.tipo === d.tipo) && (!d.estado || m.estado === d.estado));
-  const limite = Math.min(Number(d.limite) || 300, 1000);
-  return _ok({ total: lista.length, movimientos: lista.slice(0, limite), recortado: lista.length > limite });
+function _periodoValido_(s) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(_t(s)); }
+function _importe_(v) {
+  var n = typeof v === 'number' ? v : _parseNumeroFlexible(String(v));
+  if (!isFinite(n) || n <= 0 || n >= 1e12) return null;
+  if (Math.abs(Math.round(n * 100) - n * 100) > 1e-6) return null;
+  return Math.round(n * 100) / 100;
 }
+function _opIdValido_(s) { return /^[A-Za-z0-9_-]{8,80}$/.test(_t(s)); }
 
-function apiCompromisosMes(d) {
-  const periodo = _periodoValido(d.periodo) ? d.periodo : _hoy().slice(0, 7);
-  return _ok({ periodo: periodo, compromisos: _compromisosDelMes(_tabla(H.COMPROMISOS).filas, _tabla(H.MOVIMIENTOS).filas, periodo) });
-}
-
-function apiVerificarOperacion(opIdBruto) {
-  const opId = _opId(opIdBruto);
-  const hojas = [H.MOVIMIENTOS, H.DEUDAS, H.CATEGORIAS, H.CONCEPTOS, H.CUENTAS, H.COMPROMISOS];
-  if (SpreadsheetApp.getActiveSpreadsheet().getSheetByName(H.INCIDENCIAS)) hojas.push(H.INCIDENCIAS);
-  for (let i = 0; i < hojas.length; i++) {
-    const f = _tabla(hojas[i]).filas.filter(x => _t(x.op_id) === opId)[0];
-    if (f) return _ok({ existe: true, hoja: hojas[i], id: _t(f.id) });
-  }
-  return _ok({ existe: false });
-}
-
-// ===============================================================
-// ESCRITURA (todas corren dentro de _conCandado)
-// ===============================================================
-function apiElegirPerfil(d, u, opId) {
-  if (_tabla(H.CATEGORIAS).filas.length || _tabla(H.CONCEPTOS).filas.length || _tabla(H.CUENTAS).filas.length) {
-    if (_t(_config().todo.perfil_inicial).toUpperCase() === _t(d.perfil_id).toUpperCase()) return _ok({ duplicado: true });
-    throw _ex('PERFIL_YA_ELEGIDO', 'Esta planilla ya tiene un catálogo. Para cambiar de perfil hay que reiniciar TEST.');
-  }
-  return _ok(_copiarPerfil(d.perfil_id, opId));
-}
-
-function apiRegistrarMovimiento(d, u, opId) {
-  const previo = _buscarOp(H.MOVIMIENTOS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const tipo = _t(d.tipo).toUpperCase();
-  if (TIPOS_CAT.indexOf(tipo) === -1) throw _ex('TIPO_INVALIDO', 'El tipo debe ser EGRESO o INGRESO');
-  const con = _activoPorId(H.CONCEPTOS, d.concepto_id, 'concepto');
-  const cat = _activoPorId(H.CATEGORIAS, con.categoria_id, 'categoría');
-  if (_t(cat.tipo) !== tipo) throw _ex('TIPO_NO_COINCIDE', 'El concepto "' + con.nombre + '" es de tipo ' + cat.tipo + ', no ' + tipo);
-  const cuenta = _activoPorId(H.CUENTAS, d.cuenta_id, 'cuenta');
-  let compromisoId = '', periodo = '';
-  if (d.compromiso_id) {
-    const comp = _activoPorId(H.COMPROMISOS, d.compromiso_id, 'compromiso');
-    if (tipo !== 'EGRESO') throw _ex('COMPROMISO_INVALIDO', 'Un compromiso solo se paga con un gasto');
-    if (!_periodoValido(d.periodo)) throw _ex('PERIODO_INVALIDO', 'Indicá el mes del compromiso (AAAA-MM)');
-    compromisoId = _t(comp.id); periodo = d.periodo;
-  }
-  const id = _nuevoId('MOV');
-  _agregar(H.MOVIMIENTOS, [{
-    id: id, op_id: opId, fecha_operacion: _fechaReq(d.fecha), fecha_registro: _ahora(), tipo: tipo,
-    categoria_id: _t(cat.id), categoria_nombre: _t(cat.nombre), concepto_id: _t(con.id), concepto_nombre: _t(con.nombre),
-    cuenta_id: _t(cuenta.id), cuenta_destino_id: '', importe: _importeReq(d.importe), descripcion: _desc(d.descripcion),
-    deuda_id: '', compromiso_id: compromisoId, periodo: periodo, estado: 'ACTIVO', motivo_anulacion: '',
-    usuario: u.nombre, fecha_anulacion: '', anulado_por: ''
-  }]);
-  return _ok({ id: id });
-}
-
-function apiRegistrarTransferencia(d, u, opId) {
-  const previo = _buscarOp(H.MOVIMIENTOS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const origen = _activoPorId(H.CUENTAS, d.cuenta_id, 'cuenta de origen');
-  const destino = _activoPorId(H.CUENTAS, d.cuenta_destino_id, 'cuenta de destino');
-  if (_t(origen.id) === _t(destino.id)) throw _ex('MISMA_CUENTA', 'La cuenta de origen y la de destino deben ser distintas');
-  const id = _nuevoId('MOV');
-  _agregar(H.MOVIMIENTOS, [{
-    id: id, op_id: opId, fecha_operacion: _fechaReq(d.fecha), fecha_registro: _ahora(), tipo: 'TRANSFERENCIA',
-    categoria_id: '', categoria_nombre: '', concepto_id: '', concepto_nombre: 'Transferencia',
-    cuenta_id: _t(origen.id), cuenta_destino_id: _t(destino.id), importe: _importeReq(d.importe), descripcion: _desc(d.descripcion),
-    deuda_id: '', compromiso_id: '', periodo: '', estado: 'ACTIVO', motivo_anulacion: '',
-    usuario: u.nombre, fecha_anulacion: '', anulado_por: ''
-  }]);
-  return _ok({ id: id });
-}
-
-function apiAnularMovimiento(d, u) {
-  const t = _tabla(H.MOVIMIENTOS);
-  const m = t.filas.filter(x => _t(x.id) === _t(d.id))[0];
-  if (!m) throw _ex('NO_EXISTE', 'No existe el movimiento ' + d.id);
-  if (_t(m.estado) === 'ANULADO') return _ok({ duplicado: true, id: _t(m.id) });
-  if (_t(m.tipo) === 'DEUDA_ALTA') throw _ex('ANULAR_DESDE_DEUDA', 'Este movimiento es el alta de una deuda: anulá la deuda desde la pantalla Deudas');
-  const motivo = _motivo(d.motivo);
-  _actualizar(H.MOVIMIENTOS, m._fila, { estado: 'ANULADO', motivo_anulacion: motivo, fecha_anulacion: _ahora(), anulado_por: u.nombre });
-  if (_t(m.tipo) === 'PAGO_DEUDA') _refrescarEstadoDeuda(_t(m.deuda_id));
-  return _ok({ id: _t(m.id) });
-}
-
-function apiCrearDeuda(d, u, opId) {
-  const previo = _buscarOp(H.DEUDAS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const sentido = _t(d.sentido).toUpperCase();
-  if (SENTIDOS.indexOf(sentido) === -1) throw _ex('SENTIDO_INVALIDO', 'Indicá si es DEBO o ME_DEBEN');
-  const contraparte = _t(d.contraparte).slice(0, 60);
-  if (!contraparte) throw _ex('FALTA_CONTRAPARTE', 'Indicá con quién es la deuda');
-  const importe = _importeReq(d.importe), fecha = _fechaReq(d.fecha);
-  const venc = d.vencimiento ? _fechaReq(d.vencimiento) : '';
-  let cuenta = null;
-  if (d.mover_dinero) cuenta = _activoPorId(H.CUENTAS, d.cuenta_id, 'cuenta');
-  const id = _nuevoId('DEU');
-  _agregar(H.DEUDAS, [{ id: id, sentido: sentido, contraparte: contraparte, descripcion: _desc(d.descripcion), importe_original: importe,
-    fecha: fecha, vencimiento: venc, estado: 'PENDIENTE', fecha_alta: _ahora(), op_id: opId, usuario: u.nombre, motivo_anulacion: '' }]);
-  if (cuenta) {
-    _agregar(H.MOVIMIENTOS, [{
-      id: _nuevoId('MOV'), op_id: opId, fecha_operacion: fecha, fecha_registro: _ahora(), tipo: 'DEUDA_ALTA',
-      categoria_id: '', categoria_nombre: '', concepto_id: '',
-      concepto_nombre: sentido === 'DEBO' ? 'Préstamo recibido de ' + contraparte : 'Préstamo dado a ' + contraparte,
-      cuenta_id: _t(cuenta.id), cuenta_destino_id: '', importe: importe, descripcion: _desc(d.descripcion),
-      deuda_id: id, compromiso_id: '', periodo: '', estado: 'ACTIVO', motivo_anulacion: '',
-      usuario: u.nombre, fecha_anulacion: '', anulado_por: ''
-    }]);
-  }
-  return _ok({ id: id });
-}
-
-function apiPagarDeuda(d, u, opId) {
-  const previo = _buscarOp(H.MOVIMIENTOS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const deuda = _tabla(H.DEUDAS).filas.filter(x => _t(x.id) === _t(d.deuda_id))[0];
-  if (!deuda) throw _ex('NO_EXISTE', 'No existe la deuda ' + d.deuda_id);
-  if (_t(deuda.estado) === 'ANULADA') throw _ex('DEUDA_ANULADA', 'La deuda está anulada');
-  const info = _deudasConSaldo([deuda], _tabla(H.MOVIMIENTOS).filas)[0];
-  const importe = _importeReq(d.importe);
-  if (info.pendiente <= 0) throw _ex('DEUDA_SALDADA', 'Esta deuda ya está saldada');
-  if (_p2c(importe) > _p2c(info.pendiente)) throw _ex('IMPORTE_MAYOR', 'El importe supera el saldo pendiente (' + info.pendiente + ')');
-  const cuenta = _activoPorId(H.CUENTAS, d.cuenta_id, 'cuenta');
-  const id = _nuevoId('MOV');
-  const debo = _t(deuda.sentido) === 'DEBO';
-  _agregar(H.MOVIMIENTOS, [{
-    id: id, op_id: opId, fecha_operacion: _fechaReq(d.fecha), fecha_registro: _ahora(), tipo: 'PAGO_DEUDA',
-    categoria_id: '', categoria_nombre: '', concepto_id: '',
-    concepto_nombre: (debo ? 'Pago a ' : 'Cobro de ') + _t(deuda.contraparte),
-    cuenta_id: _t(cuenta.id), cuenta_destino_id: '', importe: importe, descripcion: _desc(d.descripcion),
-    deuda_id: _t(deuda.id), compromiso_id: '', periodo: '', estado: 'ACTIVO', motivo_anulacion: '',
-    usuario: u.nombre, fecha_anulacion: '', anulado_por: ''
-  }]);
-  _refrescarEstadoDeuda(_t(deuda.id));
-  return _ok({ id: id });
-}
-
-function apiAnularDeuda(d, u) {
-  const deuda = _tabla(H.DEUDAS).filas.filter(x => _t(x.id) === _t(d.id))[0];
-  if (!deuda) throw _ex('NO_EXISTE', 'No existe la deuda ' + d.id);
-  if (_t(deuda.estado) === 'ANULADA') return _ok({ duplicado: true, id: _t(deuda.id) });
-  const motivo = _motivo(d.motivo);
-  const movs = _tabla(H.MOVIMIENTOS).filas.filter(m => _t(m.deuda_id) === _t(deuda.id) && _t(m.estado) === 'ACTIVO');
-  if (movs.some(m => _t(m.tipo) === 'PAGO_DEUDA'))
-    throw _ex('TIENE_PAGOS', 'La deuda tiene pagos activos. Anulá primero esos pagos desde el Historial.');
-  movs.filter(m => _t(m.tipo) === 'DEUDA_ALTA').forEach(m =>
-    _actualizar(H.MOVIMIENTOS, m._fila, { estado: 'ANULADO', motivo_anulacion: 'Deuda anulada: ' + motivo, fecha_anulacion: _ahora(), anulado_por: u.nombre }));
-  _actualizar(H.DEUDAS, deuda._fila, { estado: 'ANULADA', motivo_anulacion: motivo });
-  return _ok({ id: _t(deuda.id) });
-}
-
-// ---------- Catálogo ----------
-function apiCrearCategoria(d, u, opId) {
-  const previo = _buscarOp(H.CATEGORIAS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const nombre = _nombreReq(d.nombre, 40), tipo = _t(d.tipo).toUpperCase();
-  if (TIPOS_CAT.indexOf(tipo) === -1) throw _ex('TIPO_INVALIDO', 'El tipo debe ser EGRESO o INGRESO');
-  const filas = _tabla(H.CATEGORIAS).filas;
-  if (filas.some(c => _act(c.activo) && _t(c.tipo) === tipo && _mismo(c.nombre, nombre))) throw _ex('YA_EXISTE', 'Ya existe la categoría "' + nombre + '"');
-  const id = _nuevoId('CAT');
-  _agregar(H.CATEGORIAS, [{ id: id, nombre: nombre, tipo: tipo, emoji: _t(d.emoji).slice(0, 8) || '📁', color: '',
-    orden: _maxOrden(filas.filter(c => _t(c.tipo) === tipo)) + 1, activo: true, origen_plantilla_id: '', fecha_alta: _ahora(), op_id: opId }]);
-  return _ok({ id: id });
-}
-
-function apiEditarCategoria(d) {
-  const c = _porId(H.CATEGORIAS, d.id, 'categoría');
-  const cambios = {};
-  if (d.nombre !== undefined) {
-    const nombre = _nombreReq(d.nombre, 40);
-    if (_tabla(H.CATEGORIAS).filas.some(x => _t(x.id) !== _t(c.id) && _act(x.activo) && _t(x.tipo) === _t(c.tipo) && _mismo(x.nombre, nombre)))
-      throw _ex('YA_EXISTE', 'Ya existe otra categoría "' + nombre + '"');
-    cambios.nombre = nombre;
-  }
-  if (d.emoji !== undefined) cambios.emoji = _t(d.emoji).slice(0, 8) || '📁';
-  if (d.orden !== undefined) cambios.orden = _ordenReq(d.orden);
-  if (d.activo !== undefined) cambios.activo = !!d.activo;
-  _actualizar(H.CATEGORIAS, c._fila, cambios);
-  return _ok({ id: _t(c.id) });
-}
-
-function apiCrearConcepto(d, u, opId) {
-  const previo = _buscarOp(H.CONCEPTOS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const cat = _activoPorId(H.CATEGORIAS, d.categoria_id, 'categoría');
-  const nombre = _nombreReq(d.nombre, 45);
-  const filas = _tabla(H.CONCEPTOS).filas.filter(c => _t(c.categoria_id) === _t(cat.id));
-  if (filas.some(c => _act(c.activo) && _mismo(c.nombre, nombre))) throw _ex('YA_EXISTE', 'Ya existe el concepto "' + nombre + '" en ' + cat.nombre);
-  const id = _nuevoId('CON');
-  _agregar(H.CONCEPTOS, [{ id: id, categoria_id: _t(cat.id), nombre: nombre, importe_sugerido: _importeOpc(d.importe_sugerido),
-    cuenta_sugerida_id: '', orden: _maxOrden(filas) + 1, activo: true, origen_plantilla_id: '', fecha_alta: _ahora(), op_id: opId }]);
-  return _ok({ id: id });
-}
-
-function apiEditarConcepto(d) {
-  const c = _porId(H.CONCEPTOS, d.id, 'concepto');
-  const cambios = {};
-  if (d.nombre !== undefined) {
-    const nombre = _nombreReq(d.nombre, 45);
-    if (_tabla(H.CONCEPTOS).filas.some(x => _t(x.id) !== _t(c.id) && _act(x.activo) && _t(x.categoria_id) === _t(c.categoria_id) && _mismo(x.nombre, nombre)))
-      throw _ex('YA_EXISTE', 'Ya existe otro concepto "' + nombre + '" en esa categoría');
-    cambios.nombre = nombre;
-  }
-  if (d.importe_sugerido !== undefined) cambios.importe_sugerido = _importeOpc(d.importe_sugerido);
-  if (d.orden !== undefined) cambios.orden = _ordenReq(d.orden);
-  if (d.activo !== undefined) cambios.activo = !!d.activo;
-  _actualizar(H.CONCEPTOS, c._fila, cambios);
-  return _ok({ id: _t(c.id) });
-}
-
-function apiCrearCuenta(d, u, opId) {
-  const previo = _buscarOp(H.CUENTAS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const nombre = _nombreReq(d.nombre, 40), tipo = _t(d.tipo).toUpperCase();
-  if (TIPOS_CUENTA.indexOf(tipo) === -1) throw _ex('TIPO_INVALIDO', 'Tipo de cuenta no válido');
-  const filas = _tabla(H.CUENTAS).filas;
-  if (filas.some(c => _act(c.activo) && _mismo(c.nombre, nombre))) throw _ex('YA_EXISTE', 'Ya existe la cuenta "' + nombre + '"');
-  const id = _nuevoId('CTA');
-  _agregar(H.CUENTAS, [{ id: id, nombre: nombre, tipo: tipo, saldo_inicial: _saldoReq(d.saldo_inicial), fecha_saldo_inicial: _hoy(),
-    color: '', orden: _maxOrden(filas) + 1, activo: true, origen_plantilla_id: '', fecha_alta: _ahora(), op_id: opId }]);
-  return _ok({ id: id });
-}
-
-function apiEditarCuenta(d) {
-  const c = _porId(H.CUENTAS, d.id, 'cuenta');
-  const cambios = {};
-  if (d.nombre !== undefined) {
-    const nombre = _nombreReq(d.nombre, 40);
-    if (_tabla(H.CUENTAS).filas.some(x => _t(x.id) !== _t(c.id) && _act(x.activo) && _mismo(x.nombre, nombre))) throw _ex('YA_EXISTE', 'Ya existe otra cuenta "' + nombre + '"');
-    cambios.nombre = nombre;
-  }
-  if (d.tipo !== undefined) {
-    const tipo = _t(d.tipo).toUpperCase();
-    if (TIPOS_CUENTA.indexOf(tipo) === -1) throw _ex('TIPO_INVALIDO', 'Tipo de cuenta no válido');
-    cambios.tipo = tipo;
-  }
-  if (d.saldo_inicial !== undefined) { cambios.saldo_inicial = _saldoReq(d.saldo_inicial); cambios.fecha_saldo_inicial = _hoy(); }
-  if (d.orden !== undefined) cambios.orden = _ordenReq(d.orden);
-  if (d.activo !== undefined) cambios.activo = !!d.activo;
-  _actualizar(H.CUENTAS, c._fila, cambios);
-  return _ok({ id: _t(c.id) });
-}
-
-function apiCrearCompromiso(d, u, opId) {
-  const previo = _buscarOp(H.COMPROMISOS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const datos = _datosCompromiso(d, true);
-  const id = _nuevoId('CMP');
-  datos.id = id; datos.activo = true; datos.op_id = opId; datos.fecha_alta = _ahora();
-  _agregar(H.COMPROMISOS, [datos]);
-  return _ok({ id: id });
-}
-
-function apiEditarCompromiso(d) {
-  const c = _porId(H.COMPROMISOS, d.id, 'compromiso');
-  const cambios = _datosCompromiso(d, false);
-  if (d.activo !== undefined) cambios.activo = !!d.activo;
-  _actualizar(H.COMPROMISOS, c._fila, cambios);
-  return _ok({ id: _t(c.id) });
-}
-
-function _datosCompromiso(d, nuevo) {
-  const r = {};
-  if (nuevo || d.nombre !== undefined) r.nombre = _nombreReq(d.nombre, 40);
-  if (nuevo || d.concepto_id !== undefined) {
-    const con = _activoPorId(H.CONCEPTOS, d.concepto_id, 'concepto');
-    const cat = _activoPorId(H.CATEGORIAS, con.categoria_id, 'categoría');
-    if (_t(cat.tipo) !== 'EGRESO') throw _ex('COMPROMISO_INVALIDO', 'Un compromiso debe usar un concepto de gasto');
-    r.concepto_id = _t(con.id); r.categoria_id = _t(cat.id);
-  }
-  if (nuevo || d.importe_estimado !== undefined) r.importe_estimado = _importeOpc(d.importe_estimado);
-  if (nuevo || d.dia_vencimiento !== undefined) {
-    const dia = Number(d.dia_vencimiento);
-    if (!(dia >= 1 && dia <= 31 && Math.floor(dia) === dia)) throw _ex('DIA_INVALIDO', 'El día de vencimiento debe ser de 1 a 31');
-    r.dia_vencimiento = dia;
-  }
-  if (nuevo || d.cuenta_sugerida_id !== undefined) r.cuenta_sugerida_id = d.cuenta_sugerida_id ? _t(_activoPorId(H.CUENTAS, d.cuenta_sugerida_id, 'cuenta').id) : '';
-  return r;
-}
-
-// ---------- Reportes de problemas (solo escribe en INCIDENCIAS) ----------
-function apiReportarIncidencia(d, u, opId) {
-  _asegurarIncidencias();
-  const previo = _buscarOp(H.INCIDENCIAS, opId);
-  if (previo) return _ok({ duplicado: true, id: _t(previo.id) });
-  const tipo = _t(d.tipo).toUpperCase();
-  if (TIPOS_INCIDENCIA.indexOf(tipo) === -1) throw _ex('TIPO_INVALIDO', 'Elegí ERROR o SUGERENCIA');
-  const desc = _sinSecretos(_t(d.descripcion)).slice(0, 2000);
-  if (desc.length < 5) throw _ex('FALTA_DESCRIPCION', 'Contá qué pasó (mínimo 5 letras)');
-  const limpio = (v, max) => _sinSecretos(_t(v)).replace(/[\u0000-\u001f]/g, ' ').slice(0, max);
-  const ahora = _ahora();
-  const id = 'INC-' + ahora.slice(0, 10).replace(/-/g, '') + '-' + Utilities.getUuid().replace(/-/g, '').slice(0, 6).toUpperCase();
-  _agregar(H.INCIDENCIAS, [{
-    id: id, fecha_servidor: ahora, estado: 'NUEVO', tipo: tipo, descripcion: desc,
-    pantalla: limpio(d.pantalla, 80), version_app: limpio(d.version_app, 20), version_backend: String(BACKEND_BUILD),
-    perfil: _t(_config().todo.perfil_inicial),            // lo pone el servidor, no el celular
-    usuario: u.nombre, navegador: limpio(d.navegador, 300), op_id: opId, notas_revision: '', fecha_cambio_estado: ''
-  }]);
-  return _ok({ id: id, fecha_servidor: ahora });
-}
-
-// Tapa claves de acceso, enlaces con clave y números largos (tarjetas/cuentas) si alguien los pega en un reporte.
-function _sinSecretos(s) {
-  return String(s || '')
-    .replace(/[#?&]k=[^\s&]*/gi, '#k=[OCULTO]')
-    .replace(/\b[a-f0-9]{32,}\b/gi, '[OCULTO]')
-    .replace(/\b\d[\d -]{11,}\d\b/g, '[NÚMERO OCULTO]');
-}
-
-function _asegurarIncidencias() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(H.INCIDENCIAS);
-  if (!sh) {
-    sh = ss.insertSheet(H.INCIDENCIAS);
-    sh.getRange(1, 1, 1, COLS.INCIDENCIAS.length).setValues([COLS.INCIDENCIAS]);
-    sh.setFrozenRows(1);
-    // Lista desplegable de estados para que el administrador los cambie a mano
-    const col = COLS.INCIDENCIAS.indexOf('estado') + 1;
-    sh.getRange(2, col, 999, 1).setDataValidation(
-      SpreadsheetApp.newDataValidation().requireValueInList(ESTADOS_INCIDENCIA, true).setAllowInvalid(false).build());
-  }
-  return sh;
-}
-
-// ===============================================================
-// CÁLCULOS
-// ===============================================================
-function _calcular(cuentas, movs, deudas) {
-  const saldos = {}, usoCat = {}, usoCon = {}, advertencias = [];
-  const sentido = {};
-  deudas.forEach(x => sentido[_t(x.id)] = _t(x.sentido));
-  cuentas.forEach(c => saldos[_t(c.id)] = _p2c(_n(c.saldo_inicial)));
-  const sumar = (id, cent) => {
-    if (!(id in saldos)) { advertencias.push('Movimiento con cuenta inexistente: ' + id); return; }
-    saldos[id] += cent;
-  };
-  movs.forEach(m => {
-    if (_t(m.estado) !== 'ACTIVO') return;
-    const imp = _p2c(m.importe), cta = _t(m.cuenta_id), tipo = _t(m.tipo);
-    if (tipo === 'INGRESO') sumar(cta, imp);
-    else if (tipo === 'EGRESO') sumar(cta, -imp);
-    else if (tipo === 'TRANSFERENCIA') { sumar(cta, -imp); sumar(_t(m.cuenta_destino_id), imp); }
-    else if (tipo === 'DEUDA_ALTA' || tipo === 'PAGO_DEUDA') {
-      const s = sentido[_t(m.deuda_id)];
-      if (!s) { advertencias.push('Movimiento ' + _t(m.id) + ' apunta a una deuda inexistente'); return; }
-      const entra = (tipo === 'DEUDA_ALTA') === (s === 'DEBO');   // alta DEBO entra; pago DEBO sale; al revés ME_DEBEN
-      sumar(cta, entra ? imp : -imp);
-    }
-    if (tipo === 'INGRESO' || tipo === 'EGRESO') {
-      usoCat[_t(m.categoria_id)] = (usoCat[_t(m.categoria_id)] || 0) + 1;
-      usoCon[_t(m.concepto_id)] = (usoCon[_t(m.concepto_id)] || 0) + 1;
-    }
-  });
-  return { saldos: saldos, usoCat: usoCat, usoCon: usoCon, advertencias: advertencias };
-}
-
-function _deudasConSaldo(deudas, movs) {
-  return deudas.map(x => {
-    const id = _t(x.id);
-    const pagos = movs.filter(m => _t(m.deuda_id) === id && _t(m.tipo) === 'PAGO_DEUDA' && _t(m.estado) === 'ACTIVO');
-    const pagado = pagos.reduce((s, m) => s + _p2c(m.importe), 0);
-    const original = _p2c(x.importe_original);
-    const anulada = _t(x.estado) === 'ANULADA';
-    const pendiente = anulada ? 0 : Math.max(original - pagado, 0);
-    return { id: id, sentido: _t(x.sentido), contraparte: _t(x.contraparte), descripcion: _t(x.descripcion),
-      importe_original: _c2p(original), pagado: _c2p(pagado), pendiente: _c2p(pendiente),
-      fecha: _fecha(x.fecha), vencimiento: _fecha(x.vencimiento),
-      estado: anulada ? 'ANULADA' : (pendiente === 0 ? 'SALDADA' : (pagado > 0 ? 'PARCIAL' : 'PENDIENTE')),
-      motivo_anulacion: _t(x.motivo_anulacion), cantidad_pagos: pagos.length };
-  }).sort((a, b) => (a.estado === 'ANULADA') - (b.estado === 'ANULADA') || (a.estado === 'SALDADA') - (b.estado === 'SALDADA') || (a.fecha < b.fecha ? 1 : -1));
-}
-
-function _refrescarEstadoDeuda(deudaId) {
-  const deuda = _tabla(H.DEUDAS).filas.filter(x => _t(x.id) === deudaId)[0];
-  if (!deuda || _t(deuda.estado) === 'ANULADA') return;
-  const info = _deudasConSaldo([deuda], _tabla(H.MOVIMIENTOS).filas)[0];
-  const nuevo = info.pendiente === 0 ? 'SALDADA' : 'PENDIENTE';
-  if (_t(deuda.estado) !== nuevo) _actualizar(H.DEUDAS, deuda._fila, { estado: nuevo });
-}
-
-function _compromisosDelMes(comps, movs, periodo) {
-  const [y, mo] = periodo.split('-').map(Number);
-  const diasMes = new Date(y, mo, 0).getDate();
-  return comps.filter(c => _act(c.activo)).map(c => {
-    const id = _t(c.id);
-    const pagos = movs.filter(m => _t(m.compromiso_id) === id && _t(m.periodo) === periodo && _t(m.estado) === 'ACTIVO' && _t(m.tipo) === 'EGRESO');
-    const pagado = pagos.reduce((s, m) => s + _p2c(m.importe), 0);
-    const est = _impONull(c.importe_estimado);
-    const dia = Math.min(Number(c.dia_vencimiento) || 1, diasMes);
-    let estado = 'PENDIENTE';
-    if (pagado > 0) estado = (est && pagado < _p2c(est)) ? 'PARCIAL' : 'PAGADO';
-    return Object.assign(_compromisoPublico(c), { periodo: periodo, vencimiento: periodo + '-' + ('0' + dia).slice(-2),
-      pagado: _c2p(pagado), estado: estado, pagos: pagos.map(m => ({ id: _t(m.id), fecha: _fecha(m.fecha_operacion), importe: _n(m.importe) })) });
-  }).sort((a, b) => a.vencimiento < b.vencimiento ? -1 : a.vencimiento > b.vencimiento ? 1 : 0);
-}
-
-function _compromisoPublico(c) {
-  return { id: _t(c.id), nombre: _t(c.nombre), categoria_id: _t(c.categoria_id), concepto_id: _t(c.concepto_id),
-    importe_estimado: _impONull(c.importe_estimado), dia_vencimiento: Number(c.dia_vencimiento) || null,
-    cuenta_sugerida_id: _t(c.cuenta_sugerida_id), activo: _act(c.activo) };
-}
-
-function _movsPublicos(movs) {
-  return movs.map(m => ({
-    id: _t(m.id), op_id: _t(m.op_id), fecha_operacion: _fecha(m.fecha_operacion), fecha_registro: _t(m.fecha_registro),
-    tipo: _t(m.tipo), categoria_id: _t(m.categoria_id), categoria_nombre: _t(m.categoria_nombre), concepto_id: _t(m.concepto_id),
-    concepto_nombre: _t(m.concepto_nombre), cuenta_id: _t(m.cuenta_id), cuenta_destino_id: _t(m.cuenta_destino_id),
-    importe: _n(m.importe), descripcion: _t(m.descripcion), deuda_id: _t(m.deuda_id), compromiso_id: _t(m.compromiso_id),
-    periodo: _t(m.periodo), estado: _t(m.estado), motivo_anulacion: _t(m.motivo_anulacion), usuario: _t(m.usuario),
-    fecha_anulacion: _t(m.fecha_anulacion), anulado_por: _t(m.anulado_por)
-  })).sort((a, b) => (a.fecha_operacion < b.fecha_operacion ? 1 : a.fecha_operacion > b.fecha_operacion ? -1 : (a.fecha_registro < b.fecha_registro ? 1 : -1)));
-}
-
-function _copiarPerfil(perfilId, opId) {
-  const pid = _t(perfilId).toUpperCase();
-  const perfil = _tabla(H.PERFILES).filas.filter(p => _t(p.perfil_id).toUpperCase() === pid)[0];
-  if (!perfil) throw _ex('PERFIL_INEXISTENTE', 'No existe el perfil ' + pid);
-  if (!_act(perfil.activo)) throw _ex('PERFIL_INACTIVO', 'El perfil ' + pid + ' está desactivado');
-  const del = f => _t(f.perfil_id).toUpperCase() === pid && _act(f.activo);
-  const ahora = _ahora(), hoy = _hoy(), op = opId || '';
-  const cuentas = _tabla(H.P_CUENTAS).filas.filter(del).sort(_porOrdenFila).map((c, i) => ({
-    id: _nuevoId('CTA'), nombre: _t(c.nombre) + ' (DEMO)', tipo: _t(c.tipo).toUpperCase(), saldo_inicial: 0, fecha_saldo_inicial: hoy,
-    color: '', orden: _ord(c.orden), activo: true, origen_plantilla_id: _t(c.plantilla_id), fecha_alta: ahora, op_id: op }));
-  const mapa = {};
-  const cats = _tabla(H.P_CATEGORIAS).filas.filter(del).filter(c => TIPOS_CAT.indexOf(_t(c.tipo).toUpperCase()) !== -1).map(c => {
-    const id = _nuevoId('CAT'); mapa[_t(c.plantilla_id)] = id;
-    return { id: id, nombre: _t(c.nombre), tipo: _t(c.tipo).toUpperCase(), emoji: _t(c.emoji), color: _t(c.color), orden: _ord(c.orden),
-      activo: true, origen_plantilla_id: _t(c.plantilla_id), fecha_alta: ahora, op_id: op };
-  });
-  const omitidos = [];
-  const cons = [];
-  _tabla(H.P_CONCEPTOS).filas.filter(del).forEach(c => {
-    const catId = mapa[_t(c.plantilla_categoria_id)];
-    if (!catId) { omitidos.push(_t(c.plantilla_id)); return; }
-    cons.push({ id: _nuevoId('CON'), categoria_id: catId, nombre: _t(c.nombre), importe_sugerido: _impONull(c.importe_sugerido),
-      cuenta_sugerida_id: '', orden: _ord(c.orden), activo: true, origen_plantilla_id: _t(c.plantilla_id), fecha_alta: ahora, op_id: op });
-  });
-  if (!cats.length) throw _ex('PERFIL_VACIO', 'El perfil ' + pid + ' no tiene categorías activas en la plantilla');
-  _agregar(H.CUENTAS, cuentas); _agregar(H.CATEGORIAS, cats); _agregar(H.CONCEPTOS, cons);
-  _setConfig('perfil_inicial', pid);
-  return { perfil_id: pid, cuentas: cuentas.length, categorias: cats.length, conceptos: cons.length, omitidos: omitidos };
-}
-
-// ===============================================================
-// FUNCIONES MANUALES (editor)
-// ===============================================================
-function inicializarTest() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) { Logger.log('❌ El script no está vinculado a una planilla.'); return; }
-  if (ss.getName().indexOf(MARCA_TEST) === -1) {
-    Logger.log('❌ DETENIDO: esta planilla se llama "' + ss.getName() + '". Solo se inicializa una planilla cuyo nombre contenga ' + MARCA_TEST + '.');
-    Logger.log('   VAO_BALANCE_BASE NO se modifica: hacé una copia llamada VAO_BALANCE_TEST y ejecutá esto en el script de la copia.');
-    return;
-  }
-  const faltan = [H.CONFIG, H.PERFILES, H.P_CUENTAS, H.P_CATEGORIAS, H.P_CONCEPTOS, H.CUENTAS, H.CATEGORIAS, H.CONCEPTOS,
-    H.MOVIMIENTOS, H.DEUDAS, H.COMPROMISOS].filter(n => !ss.getSheetByName(n));
-  if (faltan.length) { Logger.log('❌ Faltan hojas: ' + faltan.join(', ') + '. ¿Es una copia de VAO_BALANCE_BASE?'); return; }
-  PropertiesService.getScriptProperties().setProperty(PROP_TEST_ID, ss.getId());
-
-  if (!ss.getSheetByName(H.USUARIOS)) {
-    const sh = ss.insertSheet(H.USUARIOS);
-    sh.getRange(1, 1, 1, COLS.USUARIOS.length).setValues([COLS.USUARIOS]);
-    sh.setFrozenRows(1);
-    Logger.log('✅ Hoja USUARIOS creada');
-  }
-  if (!ss.getSheetByName(H.INCIDENCIAS)) { _asegurarIncidencias(); Logger.log('✅ Hoja INCIDENCIAS creada (estados: ' + ESTADOS_INCIDENCIA.join(' / ') + ')'); }
-  [H.CUENTAS, H.CATEGORIAS, H.CONCEPTOS, H.MOVIMIENTOS, H.DEUDAS, H.COMPROMISOS].forEach(n => {
-    const sh = ss.getSheetByName(n);
-    const enc = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(x => String(x).trim());
-    const agregar = COLS[n].filter(c => enc.indexOf(c) === -1);
-    if (agregar.length) {
-      sh.getRange(1, enc.filter(String).length + 1, 1, agregar.length).setValues([agregar]);
-      Logger.log('✅ ' + n + ': columnas agregadas → ' + agregar.join(', '));
-    }
-    // El backend valida los datos; las listas desplegables de la plantilla no deben bloquear escrituras del script.
-    if (sh.getMaxRows() > 1) sh.getRange(2, 1, sh.getMaxRows() - 1, sh.getMaxColumns()).clearDataValidations();
-  });
-  _setConfig('entorno', 'TEST');
-  if (!_t(_config().todo.nombre_cliente)) _setConfig('nombre_cliente', 'DEMO — Planilla de pruebas');
-  if (!('url_app' in _config().todo)) _setConfig('url_app', 'https://vao-balance.vercel.app/');
-  if (!('url_api' in _config().todo)) _setConfig('url_api', '');
-
-  const pid = _t(_config().todo.perfil_inicial);
-  if (pid && !_tabla(H.CATEGORIAS).filas.length) {
-    const r = _copiarPerfil(pid, 'INIT');
-    Logger.log('✅ Perfil ' + r.perfil_id + ' copiado: ' + r.cuentas + ' cuentas, ' + r.categorias + ' categorías, ' + r.conceptos + ' conceptos');
-  } else if (!pid) {
-    Logger.log('ℹ️ Sin perfil elegido: la app pedirá elegir uno la primera vez (o escribí FAM/EST/EMP en CONFIG > perfil_inicial y repetí).');
-  } else {
-    Logger.log('ℹ️ El catálogo ya existe (perfil ' + pid + '). No se copió nada de nuevo.');
-  }
-  Logger.log('✅ VAO_BALANCE_TEST lista. Siguiente: implementar como aplicación web y pegar la URL /exec en CONFIG > url_api.');
-}
-
-function crearAcceso() {
-  if (!_planillaEsTest()) { Logger.log('❌ Primero ejecutá inicializarTest() en VAO_BALANCE_TEST.'); return; }
-  const cfg = _config().todo;
-  const api = _t(cfg.url_api), app = _t(cfg.url_app);
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec$/.test(api)) {
-    Logger.log('❌ Falta la URL del backend: pegá en CONFIG > url_api la dirección que termina en /exec (Implementar → Administrar implementaciones).');
-    return;
-  }
-  const clave = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
-  const n = _tabla(H.USUARIOS).filas.length + 1;
-  const nombre = 'Usuario ' + n;
-  _agregar(H.USUARIOS, [{ usuario_id: _nuevoId('USR'), nombre: nombre, clave_hash: _sha256(clave), activo: true, creado: _ahora(), ultimo_acceso: '' }]);
-  Logger.log('✅ Acceso creado para "' + nombre + '" (podés cambiar el nombre en la hoja USUARIOS).');
-  Logger.log('ENLACE (abrilo en el celular; es personal, no lo publiques):');
-  Logger.log(app + '#k=' + clave + '&api=' + encodeURIComponent(api));
-  Logger.log('La clave NO queda guardada en la planilla (solo su huella). Si se pierde, creá otro acceso. Para revocar: activo = FALSE en USUARIOS.');
-}
-
-function diagnostico() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) { Logger.log('❌ No vinculado a planilla'); return; }
-  Logger.log('Planilla: "' + ss.getName() + '" · ' + PRODUCTO + ' build ' + BACKEND_BUILD);
-  Logger.log(_planillaEsTest() ? '✅ Escritura HABILITADA (planilla TEST inicializada)' : '🔒 Escritura BLOQUEADA en esta planilla');
-  Object.keys(H).forEach(k => Logger.log((ss.getSheetByName(H[k]) ? '✅ ' : '⚠️ falta ') + H[k]));
-  try {
-    const c = _config().todo;
-    Logger.log('Perfil: ' + (c.perfil_inicial || '(sin elegir)') + ' · url_api: ' + (c.url_api ? 'cargada' : 'VACÍA'));
-    Logger.log('Cuentas ' + _tabla(H.CUENTAS).filas.length + ' · Categorías ' + _tabla(H.CATEGORIAS).filas.length +
-      ' · Conceptos ' + _tabla(H.CONCEPTOS).filas.length + ' · Movimientos ' + _tabla(H.MOVIMIENTOS).filas.length +
-      ' · Deudas ' + _tabla(H.DEUDAS).filas.length + ' · Compromisos ' + _tabla(H.COMPROMISOS).filas.length);
-    if (ss.getSheetByName(H.USUARIOS)) Logger.log('Accesos activos: ' + _tabla(H.USUARIOS).filas.filter(u => _act(u.activo)).length);
-    if (ss.getSheetByName(H.INCIDENCIAS)) Logger.log('Incidencias: ' + _tabla(H.INCIDENCIAS).filas.length + ' (NUEVO: ' + _tabla(H.INCIDENCIAS).filas.filter(i => _t(i.estado) === 'NUEVO').length + ')');
-  } catch (e) { Logger.log('⚠️ ' + e.message); }
-}
-
-function reiniciarTest() {
-  if (!_planillaEsTest()) { Logger.log('❌ Solo se puede reiniciar VAO_BALANCE_TEST ya inicializada.'); return; }
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  [H.MOVIMIENTOS, H.DEUDAS, H.COMPROMISOS, H.CONCEPTOS, H.CATEGORIAS, H.CUENTAS].forEach(n => {
-    const sh = ss.getSheetByName(n);
-    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).clearContent();
-  });
-  _setConfig('perfil_inicial', '');
-  Logger.log('✅ Datos de prueba borrados (plantillas y accesos intactos). La app pedirá elegir perfil de nuevo.');
-}
-
-// ===============================================================
-// ACCESO Y SEGURIDAD
-// ===============================================================
-function _autenticar(clave) {
-  const c = _t(clave);
-  if (!/^[a-f0-9]{64}$/.test(c)) throw _ex('CLAVE_INVALIDA', 'Acceso no válido. Pedí un enlace de acceso nuevo.');
-  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(H.USUARIOS);
-  if (!sh) throw _ex('CLAVE_INVALIDA', 'Acceso no configurado en esta planilla.');
-  const h = _sha256(c);
-  const u = _tabla(H.USUARIOS).filas.filter(x => _t(x.clave_hash) === h)[0];
-  if (!u || !_act(u.activo)) throw _ex('CLAVE_INVALIDA', 'Acceso no válido o revocado.');
-  return u;
-}
-
-function _planillaEsTest() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return !!ss && ss.getName().indexOf(MARCA_TEST) !== -1 &&
-    PropertiesService.getScriptProperties().getProperty(PROP_TEST_ID) === ss.getId();
-}
-
-function _verificarEscritura() {
-  if (!_planillaEsTest()) throw _ex('ESCRITURA_BLOQUEADA', 'Esta planilla no está habilitada para escribir (solo VAO_BALANCE_TEST inicializada).');
-}
-
-function _conCandado(fn) {
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(20000)) throw _ex('OCUPADO', 'El sistema está ocupado. La operación NO se guardó; se reintentará.');
+function _conCandado_(fn) {
+  var lock = LockService.getScriptLock();
+  var tiene = false;
+  try { tiene = lock.tryLock(10000); } catch (e) { tiene = false; }
+  if (!tiene) return { error: 'Sistema ocupado, reintentar', ocupado: true };
   try { return fn(); } finally { lock.releaseLock(); }
 }
 
-function _buscarOp(hoja, opId) { return _tabla(hoja).filas.filter(f => _t(f.op_id) === opId)[0] || null; }
-
-function _opId(v) {
-  const s = _t(v);
-  if (!/^[A-Za-z0-9_-]{8,80}$/.test(s)) throw _ex('OP_ID_INVALIDO', 'Falta el identificador de operación (op_id)');
-  return s;
+// ===============================
+// ACCESO A HOJAS (por nombre de columna)
+// ===============================
+function _ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
+function _hoja_(nombre) {
+  var h = _ss_().getSheetByName(nombre);
+  if (!h) throw new Error('No existe hoja ' + nombre);
+  return h;
 }
-
-function _sha256(s) {
-  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8)
-    .map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
-}
-
-// ===============================================================
-// PLANILLA (lectura/escritura por nombre de columna)
-// ===============================================================
-function _hoja(nombre) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw _ex('PLANILLA_NO_VINCULADA', 'El script no está vinculado a una planilla');
-  const sh = ss.getSheetByName(nombre);
-  if (!sh) throw _ex('HOJA_FALTANTE', 'No existe la hoja ' + nombre, { hoja: nombre });
-  return sh;
-}
-
-function _tabla(nombre) {
-  const sh = _hoja(nombre);
-  const datos = sh.getDataRange().getValues();
-  const enc = (datos[0] || []).map(x => String(x).trim());
-  const faltan = (COLS[nombre] || []).filter(c => enc.indexOf(c) === -1);
-  if (faltan.length) throw _ex('COLUMNAS_FALTANTES', 'En ' + nombre + ' faltan columnas: ' + faltan.join(', ') + ' (¿ejecutaste inicializarTest?)', { hoja: nombre, faltan: faltan });
-  const filas = [];
-  for (let i = 1; i < datos.length; i++) {
-    const r = datos[i];
-    if (r.every(v => v === '' || v === null)) continue;
-    const o = { _fila: i + 1 };
-    enc.forEach((h, j) => { if (h) o[h] = r[j]; });
+function _tabla_(nombre, cols) {
+  var h = _hoja_(nombre);
+  var datos = h.getDataRange().getValues();
+  var enc = (datos[0] || []).map(function (x) { return String(x).trim(); });
+  var faltan = (cols || []).filter(function (c) { return enc.indexOf(c) === -1; });
+  if (faltan.length) throw new Error('En ' + nombre + ' faltan columnas: ' + faltan.join(', '));
+  var filas = [];
+  for (var i = 1; i < datos.length; i++) {
+    var r = datos[i];
+    if (r.every(function (v) { return v === '' || v === null; })) continue;
+    var o = { _fila: i + 1 };
+    for (var j = 0; j < enc.length; j++) if (enc[j]) o[enc[j]] = r[j];
     filas.push(o);
   }
-  return { sh: sh, enc: enc, filas: filas };
+  return { hoja: h, enc: enc, filas: filas };
 }
-
-function _agregar(nombre, objetos) {
-  if (!objetos.length) return;
-  const sh = _hoja(nombre);
-  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(x => String(x).trim());
-  const valores = objetos.map(o => enc.map(h => (h in o && o[h] !== null && o[h] !== undefined) ? o[h] : ''));
-  const formatos = objetos.map(o => enc.map(h => _formato(h, o[h])));
-  const fila = _ultimaFilaConDatos(sh) + 1;
-  const rango = sh.getRange(fila, 1, objetos.length, enc.length);
-  rango.setNumberFormats(formatos);
-  rango.setValues(valores);
-}
-
-function _actualizar(nombre, fila, cambios) {
-  const sh = _hoja(nombre);
-  const enc = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(x => String(x).trim());
-  Object.keys(cambios).forEach(k => {
-    const col = enc.indexOf(k);
-    if (col === -1) throw _ex('COLUMNAS_FALTANTES', 'En ' + nombre + ' falta la columna ' + k);
-    const celda = sh.getRange(fila, col + 1);
-    celda.setNumberFormat(_formato(k, cambios[k]));
-    celda.setValue(cambios[k] === null ? '' : cambios[k]);
-  });
-}
-
-// La plantilla trae filas con formato pero vacías: buscamos la última fila con datos reales.
-function _ultimaFilaConDatos(sh) {
-  const datos = sh.getDataRange().getValues();
-  for (let i = datos.length - 1; i >= 1; i--) if (datos[i].some(v => v !== '' && v !== null)) return i + 1;
+function _ultimaFila_(h) {
+  var d = h.getDataRange().getValues();
+  for (var i = d.length - 1; i >= 1; i--) if (d[i].some(function (v) { return v !== '' && v !== null; })) return i + 1;
   return 1;
 }
+// Agrega filas: los textos se guardan como TEXTO (las fechas AAAA-MM-DD no se convierten).
+function _agregar_(nombre, objetos) {
+  if (!objetos.length) return;
+  var h = _hoja_(nombre);
+  var enc = h.getRange(1, 1, 1, h.getLastColumn()).getValues()[0].map(function (x) { return String(x).trim(); });
+  var valores = objetos.map(function (o) { return enc.map(function (c) { return (c in o && o[c] !== null && o[c] !== undefined) ? o[c] : ''; }); });
+  var formatos = objetos.map(function (o) { return enc.map(function (c) { var v = o[c]; return typeof v === 'number' ? (/Importe|Saldo|Precio/.test(c) ? '#,##0.00' : '0') : (typeof v === 'boolean' ? 'General' : '@'); }); });
+  var r = h.getRange(_ultimaFila_(h) + 1, 1, objetos.length, enc.length);
+  r.setNumberFormats(formatos);
+  r.setValues(valores);
+}
+function _actualizar_(nombre, fila, cambios) {
+  var h = _hoja_(nombre);
+  var enc = h.getRange(1, 1, 1, h.getLastColumn()).getValues()[0].map(function (x) { return String(x).trim(); });
+  Object.keys(cambios).forEach(function (k) {
+    var c = enc.indexOf(k);
+    if (c === -1) throw new Error('En ' + nombre + ' falta la columna ' + k);
+    var v = cambios[k];
+    var celda = h.getRange(fila, c + 1);
+    celda.setNumberFormat(typeof v === 'number' ? (/Importe|Saldo|Precio/.test(k) ? '#,##0.00' : '0') : (typeof v === 'boolean' ? 'General' : '@'));
+    celda.setValue(v === null ? '' : v);
+  });
+}
+function _crearHojaSiFalta_(nombre, columnas) {
+  var ss = _ss_();
+  var h = ss.getSheetByName(nombre);
+  if (h) return h;
+  h = ss.insertSheet(nombre);
+  h.getRange(1, 1, 1, columnas.length).setValues([columnas]).setFontWeight('bold').setBackground('#0D47A1').setFontColor('#FFFFFF');
+  h.setFrozenRows(1);
+  return h;
+}
+function _hojaCli_(base, prefijo) { return base + '_' + prefijo; }
 
-function _formato(col, v) {
-  if (typeof v === 'boolean') return 'General';
-  if (typeof v === 'number') return COLS_IMPORTE.indexOf(col) !== -1 ? '#,##0.00' : '0';
-  return '@';
+// ===============================
+// CLAVE ADMIN (nunca escrita en el código)
+// ===============================
+function generarClaveAdmin() {
+  var clave = Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+  PropertiesService.getScriptProperties().setProperty('ADMIN_CLAVE_HASH', _hash_(clave, 'ADMIN'));
+  Logger.log('✅ Clave admin NUEVA: ' + clave);
+  Logger.log('   Anotala ahora. No queda guardada en ningún lado (solo su huella). Si la perdés, ejecutá esto de nuevo.');
+}
+function _hash_(texto, sal) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'SEBA|' + sal + '|' + texto, Utilities.Charset.UTF_8);
+  return bytes.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}
+function generarToken(largo) {
+  var t = '';
+  while (t.length < (largo || 32)) t += Utilities.getUuid().replace(/-/g, '');
+  return t.slice(0, largo || 32);
+}
+function generarPinAleatorio() {
+  var u = Utilities.getUuid().replace(/[^0-9]/g, '') + String(Math.random()).slice(2);
+  return String(100000 + (parseInt(u.slice(0, 9), 10) % 900000));
 }
 
-function _config() {
-  const todo = {};
-  _tabla(H.CONFIG).filas.forEach(f => { const k = _t(f.clave); if (k) todo[k] = f.valor; });
-  const publica = {};
-  CONFIG_PUBLICA.forEach(k => { if (k in todo) publica[k] = todo[k] === '' ? null : todo[k]; });
-  return { todo: todo, publica: publica };
+function adminLogin(data) {
+  var clave = _t(data.clave);
+  if (!clave) return { error: 'Clave requerida' };
+  var props = PropertiesService.getScriptProperties();
+  var h = props.getProperty('ADMIN_CLAVE_HASH');
+  if (!h) return { error: 'Sistema no configurado — ejecutar generarClaveAdmin() en el editor' };
+  if (_hash_(clave, 'ADMIN') !== h) return { error: 'Clave incorrecta' };
+  var token = 'ADMIN_' + generarToken(24);
+  var expira = new Date().getTime() + 10 * 60 * 1000;
+  props.setProperty('SESSION_ADMIN_' + token, JSON.stringify({ token: token, expira: expira }));
+  return { success: true, token: token, expira: expira };
+}
+function validarSesionAdmin(token) {
+  if (!token || String(token).indexOf('ADMIN_') !== 0) return false;
+  var props = PropertiesService.getScriptProperties();
+  var s = props.getProperty('SESSION_ADMIN_' + token);
+  if (!s) return false;
+  try {
+    var ses = JSON.parse(s);
+    if (ses.token !== token) return false;
+    if (new Date().getTime() > ses.expira) { props.deleteProperty('SESSION_ADMIN_' + token); return false; }
+    props.setProperty('SESSION_ADMIN_' + token, JSON.stringify({ token: token, expira: new Date().getTime() + 10 * 60 * 1000 }));
+    return true;
+  } catch (e) { return false; }
+}
+function cerrarSesionAdmin(token) {
+  if (token) PropertiesService.getScriptProperties().deleteProperty('SESSION_ADMIN_' + token);
+  return { success: true };
 }
 
-function _setConfig(clave, valor) {
-  const t = _tabla(H.CONFIG);
-  const f = t.filas.filter(x => _t(x.clave) === clave)[0];
-  if (f) _actualizar(H.CONFIG, f._fila, { valor: valor });
-  else _agregar(H.CONFIG, [{ clave: clave, valor: valor, descripcion: 'Agregado por el backend' }]);
+// ===============================
+// CLIENTES, PIN, SESIONES, VIGENCIA (de VAO POS, en una sola hoja CLIENTES)
+// ===============================
+function _clienteFila_(prefijo) {
+  var t = _tabla_('CLIENTES', COLS.CLIENTES);
+  for (var i = 0; i < t.filas.length; i++) if (_t(t.filas[i].Prefijo).toUpperCase() === prefijo) return t.filas[i];
+  return null;
+}
+function obtenerInfoCliente(prefijo) {
+  var f = _clienteFila_(prefijo);
+  if (!f) return null;
+  return { prefijo: prefijo, nombre: _t(f.Nombre), activo: _t(f.Estado).toUpperCase() === 'ACTIVO', perfil: _t(f.Perfil) };
+}
+function _obtenerVigenciaCliente_(prefijo) {
+  var f = _clienteFila_(prefijo);
+  if (!f || !f.FechaVence) return { vigente: true, fechaVence: null };
+  var fv = f.FechaVence instanceof Date ? f.FechaVence : new Date(String(f.FechaVence).slice(0, 10) + 'T00:00:00');
+  if (isNaN(fv.getTime())) return { vigente: true, fechaVence: null };
+  var hoy = new Date(), hoyDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  var venceDia = new Date(fv.getFullYear(), fv.getMonth(), fv.getDate());
+  return { vigente: hoyDia <= venceDia, fechaVence: Utilities.formatDate(venceDia, TZ, 'yyyy-MM-dd') };
+}
+function setPIN(prefijo, pin) {
+  PropertiesService.getScriptProperties().setProperty('PIN_' + prefijo, _hash_(pin, 'PIN_' + prefijo));
+}
+function clienteLogin(data) {
+  var prefijo = _t(data.prefijo).toUpperCase(), pin = _t(data.pin);
+  if (!prefijo) return { error: 'Código requerido' };
+  if (!/^\d{6}$/.test(pin)) return { error: 'El PIN debe tener 6 números' };
+  var info = obtenerInfoCliente(prefijo);
+  if (!info) return { error: 'Cliente no encontrado' };
+  if (!info.activo) return { error: 'Cliente inactivo — contactar a VAO Sistemas' };
+  if (!_obtenerVigenciaCliente_(prefijo).vigente) return { error: 'Suscripción vencida — contactar a VAO Sistemas' };
+  var props = PropertiesService.getScriptProperties();
+  // Bloqueo por intentos: 5 fallos → 15 minutos
+  var kInt = 'INTENTOS_' + prefijo, intentos = {};
+  try { intentos = JSON.parse(props.getProperty(kInt) || '{}'); } catch (e) { intentos = {}; }
+  var ahora = new Date().getTime();
+  if (intentos.hasta && ahora < intentos.hasta) return { error: 'Demasiados intentos. Probá de nuevo en unos minutos.' };
+  var h = props.getProperty('PIN_' + prefijo);
+  if (!h) return { error: 'Acceso no configurado — contactar a VAO Sistemas' };
+  if (_hash_(pin, 'PIN_' + prefijo) !== h) {
+    var n = (intentos.n || 0) + 1;
+    props.setProperty(kInt, JSON.stringify(n >= 5 ? { n: 0, hasta: ahora + 15 * 60 * 1000 } : { n: n }));
+    return { error: 'PIN incorrecto' };
+  }
+  props.deleteProperty(kInt);
+  var token = 'CLI_' + prefijo + '_' + generarToken(24);
+  var expira = ahora + 7 * 24 * 60 * 60 * 1000;
+  var todas = props.getProperties(), pref = 'SESSION_' + prefijo + '_';
+  Object.keys(todas).forEach(function (k) {
+    if (k.indexOf(pref) !== 0) return;
+    try { var s = JSON.parse(todas[k]); if (!s.expira || ahora > s.expira) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); }
+  });
+  props.setProperty(pref + token, JSON.stringify({ token: token, expira: expira }));
+  return { success: true, token: token, expira: expira, prefijo: prefijo, nombre: info.nombre };
+}
+function validarSesionCliente(prefijo, token) {
+  if (!prefijo || !token || String(token).indexOf('CLI_' + prefijo + '_') !== 0) return false;
+  var props = PropertiesService.getScriptProperties();
+  var s = props.getProperty('SESSION_' + prefijo + '_' + token);
+  if (!s) return false;
+  try {
+    var ses = JSON.parse(s);
+    if (ses.token !== token) return false;
+    if (new Date().getTime() > ses.expira) { props.deleteProperty('SESSION_' + prefijo + '_' + token); return false; }
+    return true;
+  } catch (e) { return false; }
+}
+function cerrarSesionCliente(prefijo, token) {
+  if (prefijo && token) PropertiesService.getScriptProperties().deleteProperty('SESSION_' + prefijo + '_' + token);
+  return { success: true };
+}
+function _requiereSesionValida_(prefijo, token) {
+  var info = obtenerInfoCliente(prefijo);
+  if (!info) return 'Cliente no encontrado';
+  if (!info.activo) return 'Cliente inactivo — contactar a VAO Sistemas';
+  if (!_obtenerVigenciaCliente_(prefijo).vigente) return 'Suscripción vencida — contactar a VAO Sistemas';
+  if (!validarSesionCliente(prefijo, token)) return 'Sesión inválida o expirada';
+  return null;
 }
 
-function _porId(hoja, id, que) {
-  const f = _tabla(hoja).filas.filter(x => _t(x.id) === _t(id))[0];
-  if (!f || !_t(id)) throw _ex('NO_EXISTE', 'No existe ' + que + ' ' + _t(id));
-  return f;
+// ── ADMIN: clientes ──
+function getPerfiles() {
+  var perfiles = _tabla_('PERFILES', COLS.PERFILES).filas.filter(function (p) { return _esActivoFlag_(p.Activo) || p.Activo === true; })
+    .map(function (p) { return { id: _t(p.PerfilId).toUpperCase(), nombre: _t(p.Nombre), descripcion: _t(p.Descripcion), orden: Number(p.Orden) || 99 }; })
+    .sort(function (a, b) { return a.orden - b.orden; });
+  return { success: true, perfiles: perfiles };
 }
-function _activoPorId(hoja, id, que) {
-  const f = _porId(hoja, id, que);
-  if (!_act(f.activo)) throw _ex('INACTIVO', 'La ' + que + ' "' + _t(f.nombre) + '" está desactivada');
-  return f;
+function crearCliente(data) {
+  var prefijo = _t(data.prefijo).toUpperCase();
+  var nombre = _t(data.nombre), perfilId = _t(data.perfil).toUpperCase();
+  if (!/^[A-Z]{2,3}$/.test(prefijo)) return _def('Prefijo inválido (2 o 3 letras)');
+  if (!nombre) return _def('Nombre requerido');
+  if (_clienteFila_(prefijo)) return _def('El prefijo ' + prefijo + ' ya existe');
+  var perfil = getPerfiles().perfiles.filter(function (p) { return p.id === perfilId; })[0];
+  if (!perfil) return _def('Elegí un perfil válido');
+  var ss = _ss_();
+  ['CATALOGO', 'MOVIMIENTOS', 'CUENTAS', 'DEUDAS', 'COMPROMISOS'].forEach(function (b) {
+    if (ss.getSheetByName(_hojaCli_(b, prefijo))) throw new Error('Ya existe la hoja ' + _hojaCli_(b, prefijo) + ' (revisar a mano)');
+  });
+  ['CATALOGO', 'MOVIMIENTOS', 'CUENTAS', 'DEUDAS', 'COMPROMISOS', 'CONFIG'].forEach(function (b) { _crearHojaSiFalta_(_hojaCli_(b, prefijo), COLS[b]); });
+  // Copiar plantilla del perfil (datos de la planilla, no del código)
+  var ahora = _ahora_();
+  var cat = _tabla_('PLANTILLA_CATALOGO', COLS.PLANTILLA_CATALOGO).filas
+    .filter(function (r) { return _t(r.PerfilId).toUpperCase() === perfilId && (r.Activo === true || _esActivoFlag_(r.Activo)); })
+    .sort(function (a, b) { return (Number(a.Orden) || 99) - (Number(b.Orden) || 99); });
+  var nG = 0, nI = 0;
+  var filasCat = cat.map(function (r) {
+    var tipo = _t(r.Tipo).toUpperCase() === 'INGRESO' ? 'INGRESO' : 'GASTO';
+    var cod = tipo === 'GASTO' ? 'G' + ('000' + (++nG)).slice(-3) : 'I' + ('000' + (++nI)).slice(-3);
+    var precio = _parseNumeroFlexible(r.PrecioSugerido);
+    return { Codigo: cod, Concepto: _t(r.Concepto).toUpperCase(), Categoria: _t(r.Categoria).toUpperCase(), Tipo: tipo,
+      PrecioSugerido: precio > 0 ? precio : '', Activo: true, Orden: Number(r.Orden) || 99, FechaAlta: ahora, OpId: '' };
+  });
+  _agregar_(_hojaCli_('CATALOGO', prefijo), filasCat);
+  var ctas = _tabla_('PLANTILLA_CUENTAS', COLS.PLANTILLA_CUENTAS).filas
+    .filter(function (r) { return _t(r.PerfilId).toUpperCase() === perfilId && (r.Activo === true || _esActivoFlag_(r.Activo)); })
+    .sort(function (a, b) { return (Number(a.Orden) || 99) - (Number(b.Orden) || 99); })
+    .map(function (r, i) { return { Codigo: 'C' + ('00' + (i + 1)).slice(-2), Cuenta: _t(r.Cuenta).toUpperCase(), TipoCuenta: _t(r.TipoCuenta).toUpperCase() || 'OTRA', SaldoInicial: 0, Activo: true, Orden: i + 1, FechaAlta: ahora, OpId: '' }; });
+  _agregar_(_hojaCli_('CUENTAS', prefijo), ctas);
+  _agregar_(_hojaCli_('CONFIG', prefijo), [
+    { campo: 'nombre', valor: nombre, notas: '' }, { campo: 'perfil', valor: perfilId, notas: perfil.nombre },
+    { campo: 'moneda', valor: 'ARS', notas: '' }, { campo: 'zona_horaria', valor: TZ, notas: '' }
+  ]);
+  _agregar_('CLIENTES', [{ Prefijo: prefijo, Nombre: nombre, Contacto: _t(data.contacto), Telefono: _t(data.telefono), Correo: _t(data.correo).toLowerCase().replace(/\s+/g, ''),
+    Perfil: perfilId, Estado: 'ACTIVO', FechaAlta: ahora, FechaVence: '', Observaciones: '' }]);
+  var pin = generarPinAleatorio();
+  setPIN(prefijo, pin);
+  return { success: true, prefijo: prefijo, pin: pin, conceptos: filasCat.length, cuentas: ctas.length, mensaje: '✅ Cliente ' + nombre + ' (' + prefijo + ') creado' };
+}
+function _setEstadoCliente_(prefijo, estado) {
+  prefijo = _t(prefijo).toUpperCase();
+  var f = _clienteFila_(prefijo);
+  if (!f) return { error: 'Cliente no encontrado' };
+  _actualizar_('CLIENTES', f._fila, { Estado: estado });
+  return { success: true, mensaje: (estado === 'ACTIVO' ? '✅ Cliente ' : '🔒 Cliente ') + prefijo + (estado === 'ACTIVO' ? ' activado' : ' suspendido') };
+}
+function resetPinCliente(data) {
+  var prefijo = _t(data.prefijo).toUpperCase();
+  if (!_clienteFila_(prefijo)) return { error: 'Cliente no encontrado' };
+  var pin = generarPinAleatorio();
+  setPIN(prefijo, pin);
+  PropertiesService.getScriptProperties().deleteProperty('INTENTOS_' + prefijo);
+  return { success: true, prefijo: prefijo, pin: pin, mensaje: '✅ PIN reseteado' };
+}
+function renovarVigenciaCliente(data) {
+  var prefijo = _t(data.prefijo).toUpperCase();
+  var dias = parseInt(data.dias, 10);
+  if (!dias || dias <= 0 || dias !== parseFloat(data.dias)) return { error: 'Cantidad de días inválida' };
+  var f = _clienteFila_(prefijo);
+  if (!f) return { error: 'Cliente no encontrado' };
+  var hoy = new Date(), hoyDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  var base = hoyDia, vig = _obtenerVigenciaCliente_(prefijo);
+  if (vig.fechaVence) { var p = vig.fechaVence.split('-').map(Number); var fv = new Date(p[0], p[1] - 1, p[2]); if (fv > base) base = fv; }
+  var nueva = new Date(base.getFullYear(), base.getMonth(), base.getDate() + dias);
+  var txt = Utilities.formatDate(nueva, TZ, 'yyyy-MM-dd');
+  _actualizar_('CLIENTES', f._fila, { FechaVence: txt });
+  return { success: true, prefijo: prefijo, fechaVence: txt, mensaje: '✅ Vigencia renovada' };
+}
+function getResumenAdmin() {
+  var props = PropertiesService.getScriptProperties();
+  var todas = props.getProperties();
+  var mes = _hoy_().slice(0, 7);
+  var clientes = _tabla_('CLIENTES', COLS.CLIENTES).filas.map(function (f) {
+    var px = _t(f.Prefijo).toUpperCase();
+    var gastosMes = 0, movs = 0;
+    try {
+      _tabla_(_hojaCli_('MOVIMIENTOS', px), COLS.MOVIMIENTOS).filas.forEach(function (m) {
+        if (_t(m.Estado) !== 'ACTIVO') return;
+        movs++;
+        if (_t(m.Tipo) === 'GASTO' && _fechaTxt_(m.FechaOperacion).slice(0, 7) === mes) gastosMes += _cent(m.Importe);
+      });
+    } catch (e) {}
+    var vig = _obtenerVigenciaCliente_(px);
+    return { prefijo: px, nombre: _t(f.Nombre), perfil: _t(f.Perfil), activo: _t(f.Estado).toUpperCase() === 'ACTIVO',
+      tienePin: !!props.getProperty('PIN_' + px), sesionActiva: Object.keys(todas).some(function (k) { return k.indexOf('SESSION_' + px + '_') === 0; }),
+      gastosMes: _pesos(gastosMes), movimientos: movs, vigente: vig.vigente, fechaVence: vig.fechaVence };
+  });
+  var incNuevas = 0;
+  try { incNuevas = _tabla_('INCIDENCIAS', COLS.INCIDENCIAS).filas.filter(function (i) { return _t(i.Estado) === 'NUEVO'; }).length; } catch (e) {}
+  return { success: true, clientes: clientes, incidenciasNuevas: incNuevas };
+}
+function getIncidencias(data) {
+  var lista = _tabla_('INCIDENCIAS', COLS.INCIDENCIAS).filas.map(function (i) {
+    return { id: _t(i.Id), fecha: _t(i.FechaServidor), estado: _t(i.Estado), prefijo: _t(i.Prefijo), tipo: _t(i.Tipo), descripcion: _t(i.Descripcion), pantalla: _t(i.Pantalla), version: _t(i.VersionApp) };
+  }).reverse();
+  return { success: true, incidencias: lista.slice(0, 100) };
 }
 
-// ===============================================================
-// VALIDACIONES Y UTILIDADES
-// ===============================================================
-function _importeReq(v) {
-  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
-  if (!isFinite(n) || n <= 0) throw _ex('IMPORTE_INVALIDO', 'El importe debe ser mayor que cero');
-  if (n >= MAX_IMPORTE) throw _ex('IMPORTE_INVALIDO', 'Importe demasiado grande');
-  if (Math.abs(Math.round(n * 100) - n * 100) > 1e-6) throw _ex('IMPORTE_INVALIDO', 'Máximo dos decimales');
-  return Math.round(n * 100) / 100;
+// ===============================
+// CONFIG / CATÁLOGO / ESTADO
+// ===============================
+function getConfig(prefijo) {
+  var cfg = {};
+  try {
+    _tabla_(_hojaCli_('CONFIG', prefijo), COLS.CONFIG).filas.forEach(function (f) { var k = _t(f.campo); if (k) cfg[k] = f.valor; });
+  } catch (e) {}
+  var info = obtenerInfoCliente(prefijo);
+  cfg.nombre = cfg.nombre || (info && info.nombre) || prefijo;
+  return { success: true, config: cfg };
 }
-function _importeOpc(v) { return (v === null || v === undefined || v === '') ? null : _importeReq(v); }
-function _saldoReq(v) {
-  if (v === null || v === undefined || v === '') return 0;
-  const n = Number(String(v).replace(',', '.'));
-  if (!isFinite(n) || Math.abs(n) >= MAX_IMPORTE) throw _ex('IMPORTE_INVALIDO', 'Saldo inicial no válido');
-  return Math.round(n * 100) / 100;
+
+function _catalogo_(prefijo) {
+  return _tabla_(_hojaCli_('CATALOGO', prefijo), COLS.CATALOGO).filas.map(function (f) {
+    var precio = _parseNumeroFlexible(f.PrecioSugerido);
+    return { codigo: _t(f.Codigo).toUpperCase(), name: _t(f.Concepto).toUpperCase(), category: _t(f.Categoria).toUpperCase() || 'GENERAL',
+      tipo: _t(f.Tipo).toUpperCase() === 'INGRESO' ? 'INGRESO' : 'GASTO', price: precio > 0 ? precio : null,
+      activo: f.Activo === true || _esActivoFlag_(f.Activo), orden: Number(f.Orden) || 99, _fila: f._fila };
+  });
 }
-function _fechaReq(v) { if (!_fechaValida(v)) throw _ex('FECHA_INVALIDA', 'Fecha no válida (AAAA-MM-DD)'); return v; }
-function _fechaValida(v) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(_t(v))) return false;
-  const p = v.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2]);
-  return d.getFullYear() === p[0] && d.getMonth() === p[1] - 1 && d.getDate() === p[2] && p[0] >= 2000 && p[0] <= 2100;
+function _cuentas_(prefijo) {
+  return _tabla_(_hojaCli_('CUENTAS', prefijo), COLS.CUENTAS).filas.map(function (f) {
+    return { codigo: _t(f.Codigo).toUpperCase(), nombre: _t(f.Cuenta).toUpperCase(), tipo: _t(f.TipoCuenta).toUpperCase(),
+      saldoInicial: _parseNumeroFlexible(f.SaldoInicial), activo: f.Activo === true || _esActivoFlag_(f.Activo), orden: Number(f.Orden) || 99, _fila: f._fila };
+  });
 }
-function _periodoValido(v) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(_t(v)); }
-function _nombreReq(v, max) {
-  const s = _t(v).replace(/\s+/g, ' ');
-  if (!s) throw _ex('FALTA_NOMBRE', 'Escribí un nombre');
-  if (s.length > max) throw _ex('NOMBRE_LARGO', 'Nombre demasiado largo (máximo ' + max + ')');
-  return s;
+function _movs_(prefijo) { return _tabla_(_hojaCli_('MOVIMIENTOS', prefijo), COLS.MOVIMIENTOS).filas; }
+function _deudasFilas_(prefijo) { return _tabla_(_hojaCli_('DEUDAS', prefijo), COLS.DEUDAS).filas; }
+
+// Saldos: siempre calculados desde los movimientos ACTIVOS (nunca guardados).
+function _calcular_(prefijo, cuentas, movs, deudas) {
+  var saldo = {}, uso = {}, sentido = {}, avisos = [];
+  cuentas.forEach(function (c) { saldo[c.codigo] = Math.round(c.saldoInicial * 100); });
+  deudas.forEach(function (d) { sentido[_t(d.DeudaId)] = _t(d.Sentido); });
+  function sumar(cta, c) { if (!(cta in saldo)) { avisos.push('Movimiento con cuenta inexistente: ' + cta); return; } saldo[cta] += c; }
+  movs.forEach(function (m) {
+    if (_t(m.Estado) !== 'ACTIVO') return;
+    var imp = _cent(m.Importe), cta = _t(m.Cuenta).toUpperCase(), tipo = _t(m.Tipo);
+    if (tipo === 'INGRESO') sumar(cta, imp);
+    else if (tipo === 'GASTO') sumar(cta, -imp);
+    else if (tipo === 'TRANSFERENCIA') { sumar(cta, -imp); sumar(_t(m.CuentaDestino).toUpperCase(), imp); }
+    else if (tipo === 'DEUDA_ALTA' || tipo === 'PAGO_DEUDA') {
+      var s = sentido[_t(m.DeudaId)];
+      if (!s) { avisos.push('Movimiento ' + _t(m.MovId) + ' con deuda inexistente'); return; }
+      var entra = (tipo === 'DEUDA_ALTA') === (s === 'DEBO');
+      sumar(cta, entra ? imp : -imp);
+    }
+    if (tipo === 'GASTO' || tipo === 'INGRESO') { var k = _t(m.Codigo).toUpperCase(); uso[k] = (uso[k] || 0) + 1; }
+  });
+  return { saldo: saldo, uso: uso, avisos: avisos };
 }
-function _ordenReq(v) { const n = Number(v); if (!isFinite(n)) throw _ex('ORDEN_INVALIDO', 'Orden no válido'); return Math.round(n); }
-function _motivo(v) { const s = _t(v); if (s.length < 3) throw _ex('FALTA_MOTIVO', 'Escribí el motivo de la anulación'); return s.slice(0, 200); }
-function _desc(v) { return _t(v).slice(0, 300); }
-function _mismo(a, b) { return _t(a).toLowerCase() === _t(b).toLowerCase(); }
-function _maxOrden(filas) { return filas.reduce((m, f) => Math.max(m, Number(f.orden) || 0), 0); }
-function _nuevoId(pref) { return pref + '-' + Utilities.getUuid().replace(/-/g, '').slice(0, 12).toUpperCase(); }
-function _t(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
-function _n(v) { const n = Number(v); return isFinite(n) ? n : 0; }
-function _impONull(v) { if (v === '' || v === null || v === undefined) return null; const n = Number(v); return isFinite(n) ? n : null; }
-function _ord(v) { const n = Number(v); return (v === '' || v === null || !isFinite(n)) ? 9999 : n; }
-function _act(v) {
-  if (v === true) return true;
-  const s = _t(v).toUpperCase();
-  return s === 'TRUE' || s === 'VERDADERO' || s === 'SI' || s === 'SÍ' || s === '1';
+
+function getEstado(prefijo, d) {
+  var cat = _catalogo_(prefijo), ctas = _cuentas_(prefijo), movs = _movs_(prefijo), deudas = _deudasFilas_(prefijo);
+  var calc = _calcular_(prefijo, ctas, movs, deudas);
+  var mes = _hoy_().slice(0, 7), ing = 0, gas = 0, hoyG = 0, hoyI = 0, hoy = _hoy_();
+  movs.forEach(function (m) {
+    if (_t(m.Estado) !== 'ACTIVO') return;
+    var f = _fechaTxt_(m.FechaOperacion), imp = _cent(m.Importe), tipo = _t(m.Tipo);
+    if (f.slice(0, 7) === mes) { if (tipo === 'INGRESO') ing += imp; if (tipo === 'GASTO') gas += imp; }
+    if (f === hoy) { if (tipo === 'INGRESO') hoyI += imp; if (tipo === 'GASTO') hoyG += imp; }
+  });
+  var cuentas = ctas.map(function (c) { return { codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, saldoInicial: c.saldoInicial, saldo: _pesos(calc.saldo[c.codigo] || 0), activo: c.activo, orden: c.orden }; })
+    .sort(function (a, b) { return a.orden - b.orden; });
+  var total = 0; cuentas.forEach(function (c) { total += Math.round(c.saldo * 100); });
+  var deudasAbiertas = _deudasConSaldo_(prefijo, deudas, movs).filter(function (x) { return x.estado === 'PENDIENTE' || x.estado === 'PARCIAL'; });
+  return {
+    success: true, hoy: hoy, periodo: mes, nombre: _t(getConfig(prefijo).config.nombre),
+    productos: cat.filter(function (p) { return p.activo; }).map(function (p) { return { codigo: p.codigo, name: p.name, category: p.category, tipo: p.tipo, price: p.price, uso: calc.uso[p.codigo] || 0, orden: p.orden }; }),
+    catalogoCompleto: cat.map(function (p) { return { codigo: p.codigo, name: p.name, category: p.category, tipo: p.tipo, price: p.price, activo: p.activo, orden: p.orden, uso: calc.uso[p.codigo] || 0 }; }),
+    cuentas: cuentas, total: _pesos(total),
+    mes: { ingresos: _pesos(ing), gastos: _pesos(gas) }, hoyTot: { ingresos: _pesos(hoyI), gastos: _pesos(hoyG) },
+    deudasAbiertas: deudasAbiertas.length,
+    compromisosPendientes: _compromisosMes_(prefijo, mes, movs).filter(function (c) { return c.estado !== 'PAGADO'; }),
+    avisos: calc.avisos
+  };
 }
-function _p2c(v) { return Math.round(_n(v) * 100); }
-function _c2p(c) { return Math.round(c) / 100; }
-function _porOrden(a, b) { return (a.orden - b.orden) || String(a.nombre).localeCompare(String(b.nombre), 'es'); }
-function _porOrdenFila(a, b) { return _ord(a.orden) - _ord(b.orden); }
-function _porNombre(a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); }
-function _tz() { try { return _t(_config().todo.zona_horaria) || TZ_DEFECTO; } catch (e) { return TZ_DEFECTO; } }
-function _hoy() { return Utilities.formatDate(new Date(), _tz(), 'yyyy-MM-dd'); }
-function _ahora() { return Utilities.formatDate(new Date(), TZ_DEFECTO, 'yyyy-MM-dd HH:mm:ss'); }
-function _fecha(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, TZ_DEFECTO, 'yyyy-MM-dd');
-  return _t(v);
+
+function getMovimientos(prefijo, d) {
+  var desde = _fechaValida_(d.desde) ? d.desde : '', hasta = _fechaValida_(d.hasta) ? d.hasta : '';
+  var lista = _movs_(prefijo).map(function (m) {
+    return { fechaRegistro: _t(m.FechaRegistro), fecha: _fechaTxt_(m.FechaOperacion), tipo: _t(m.Tipo), categoria: _t(m.Categoria), concepto: _t(m.Concepto),
+      codigo: _t(m.Codigo), descripcion: _t(m.Descripcion), importe: _parseNumeroFlexible(m.Importe), cuenta: _t(m.Cuenta), cuentaDestino: _t(m.CuentaDestino),
+      movId: _t(m.MovId), renglon: Number(m.Renglon) || 1, estado: _t(m.Estado), motivo: _t(m.MotivoAnulacion), deudaId: _t(m.DeudaId),
+      compromisoId: _t(m.CompromisoId), periodo: _t(m.Periodo) };
+  }).filter(function (m) { return (!desde || m.fecha >= desde) && (!hasta || m.fecha <= hasta); });
+  return { success: true, movimientos: lista };
 }
-function _ok(o) { return Object.assign({ ok: true }, o || {}); }
-function _err(codigo, mensaje, extra) { return Object.assign({ ok: false, error: codigo, mensaje: mensaje }, extra || {}); }
-function _ex(codigo, mensaje, extra) { const e = new Error(mensaje); e.codigo = codigo; e.extra = extra; return e; }
-function _json(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+// ===============================
+// BOLETA (= venta del POS): varios renglones, un MovId, candado + idempotencia
+// ===============================
+function _buscarMovId_(prefijo, movId) {
+  var h = _hoja_(_hojaCli_('MOVIMIENTOS', prefijo));
+  var u = _ultimaFila_(h);
+  if (u < 2) return [];
+  var col = COLS.MOVIMIENTOS.indexOf('MovId') + 1;
+  var vals = h.getRange(2, col, u - 1, 1).getValues();
+  var filas = [];
+  for (var i = 0; i < vals.length; i++) if (_t(vals[i][0]) === movId) filas.push(i + 2);
+  return filas;
+}
+function _movIdValido_(s) { return /^[A-Z]{2,4}_\d{8}-\d{6}-[A-Z0-9]{4}$/.test(_t(s)); }
+
+function registrarBoleta(prefijo, d) {
+  var movId = _t(d.movId);
+  if (!_movIdValido_(movId)) return _def('Identificador de boleta inválido');
+  var ya = _buscarMovId_(prefijo, movId);
+  if (ya.length) return { success: true, yaExistia: true, movId: movId, renglones: ya.length };
+  var tipo = _t(d.tipo).toUpperCase();
+  if (TIPOS.indexOf(tipo) === -1) return _def('Tipo inválido');
+  var fecha = _t(d.fecha);
+  if (!_fechaValida_(fecha)) return _def('Fecha inválida');
+  var cta = _cuentas_(prefijo).filter(function (c) { return c.codigo === _t(d.cuenta).toUpperCase(); })[0];
+  if (!cta) return _def('Elegí una cuenta válida');
+  if (!cta.activo) return _def('La cuenta ' + cta.nombre + ' está desactivada');
+  var items = Array.isArray(d.items) ? d.items : [];
+  if (!items.length) return _def('La boleta está vacía');
+  if (items.length > 60) return _def('Máximo 60 renglones por boleta');
+  var cat = {}; _catalogo_(prefijo).forEach(function (p) { cat[p.codigo] = p; });
+  var errores = [], filas = [], ahora = _ahora_();
+  var compromisoId = '', periodo = '';
+  if (d.compromisoId) {
+    var comp = _tabla_(_hojaCli_('COMPROMISOS', prefijo), COLS.COMPROMISOS).filas.filter(function (c) { return _t(c.CompromisoId) === _t(d.compromisoId); })[0];
+    if (!comp) return _def('Compromiso inexistente');
+    if (tipo !== 'GASTO') return _def('Un compromiso se paga con un gasto');
+    if (!_periodoValido_(d.periodo)) return _def('Falta el mes del compromiso');
+    compromisoId = _t(comp.CompromisoId); periodo = d.periodo;
+  }
+  items.forEach(function (it, i) {
+    var p = cat[_t(it.codigo).toUpperCase()];
+    var imp = _importe_(it.importe);
+    if (!p) { errores.push('Renglón ' + (i + 1) + ': concepto inexistente — quitalo y volvé a agregarlo'); return; }
+    if (!p.activo) { errores.push(p.name + ': concepto desactivado'); return; }
+    if (p.tipo !== tipo) { errores.push(p.name + ': es de ' + p.tipo + ', no de ' + tipo); return; }
+    if (imp === null) { errores.push(p.name + ': importe inválido'); return; }
+    filas.push({ FechaRegistro: ahora, FechaOperacion: fecha, Tipo: tipo, Categoria: p.category, Concepto: p.name, Codigo: p.codigo,
+      Descripcion: _t(it.descripcion).slice(0, 200), Importe: imp, Cuenta: cta.codigo, CuentaDestino: '', MovId: movId, Renglon: i + 1,
+      Estado: 'ACTIVO', MotivoAnulacion: '', DeudaId: '', CompromisoId: compromisoId, Periodo: periodo, FechaAnulacion: '' });
+  });
+  if (errores.length) return { success: false, definitivo: true, error: errores.join(' · '), errores: errores };
+  _agregar_(_hojaCli_('MOVIMIENTOS', prefijo), filas);   // todos los renglones en UNA sola escritura
+  var total = 0; filas.forEach(function (f) { total += Math.round(f.Importe * 100); });
+  return { success: true, movId: movId, renglones: filas.length, total: _pesos(total), procesados: filas.map(function (f) { return { name: f.Concepto, importe: f.Importe, descripcion: f.Descripcion }; }) };
+}
+
+function registrarTransferencia(prefijo, d) {
+  var movId = _t(d.movId);
+  if (!_movIdValido_(movId)) return _def('Identificador inválido');
+  if (_buscarMovId_(prefijo, movId).length) return { success: true, yaExistia: true, movId: movId };
+  var ctas = {}; _cuentas_(prefijo).forEach(function (c) { ctas[c.codigo] = c; });
+  var o = ctas[_t(d.origen).toUpperCase()], de = ctas[_t(d.destino).toUpperCase()];
+  if (!o || !de) return _def('Elegí las dos cuentas');
+  if (!o.activo || !de.activo) return _def('Hay una cuenta desactivada');
+  if (o.codigo === de.codigo) return _def('Origen y destino deben ser distintas');
+  var imp = _importe_(d.importe); if (imp === null) return _def('Importe inválido');
+  if (!_fechaValida_(d.fecha)) return _def('Fecha inválida');
+  _agregar_(_hojaCli_('MOVIMIENTOS', prefijo), [{ FechaRegistro: _ahora_(), FechaOperacion: d.fecha, Tipo: 'TRANSFERENCIA', Categoria: '', Concepto: 'TRANSFERENCIA',
+    Codigo: '', Descripcion: _t(d.descripcion).slice(0, 200), Importe: imp, Cuenta: o.codigo, CuentaDestino: de.codigo, MovId: movId, Renglon: 1,
+    Estado: 'ACTIVO', MotivoAnulacion: '', DeudaId: '', CompromisoId: '', Periodo: '', FechaAnulacion: '' }]);
+  return { success: true, movId: movId };
+}
+
+function anularMovimiento(prefijo, d) {
+  var movId = _t(d.movId), renglon = Number(d.renglon) || 0, motivo = _t(d.motivo);
+  if (motivo.length < 3) return _def('Escribí el motivo');
+  var t = _tabla_(_hojaCli_('MOVIMIENTOS', prefijo), COLS.MOVIMIENTOS);
+  var filas = t.filas.filter(function (m) { return _t(m.MovId) === movId && (!renglon || Number(m.Renglon) === renglon); });
+  if (!filas.length) return _def('Movimiento no encontrado');
+  if (filas.some(function (m) { return _t(m.Tipo) === 'DEUDA_ALTA'; })) return _def('Es el alta de una deuda: anulala desde Deudas');
+  var anuladas = 0, ahora = _ahora_();
+  filas.forEach(function (m) {
+    if (_t(m.Estado) !== 'ACTIVO') return;
+    _actualizar_(_hojaCli_('MOVIMIENTOS', prefijo), m._fila, { Estado: 'ANULADO', MotivoAnulacion: motivo.slice(0, 200), FechaAnulacion: ahora });
+    anuladas++;
+    if (_t(m.Tipo) === 'PAGO_DEUDA') _refrescarDeuda_(prefijo, _t(m.DeudaId));
+  });
+  return { success: true, anuladas: anuladas, yaEstaba: anuladas === 0 };
+}
+
+// ===============================
+// CATÁLOGO Y CUENTAS (➕)
+// ===============================
+function _siguienteCodigo_(lista, letra) {
+  var max = 0;
+  lista.forEach(function (x) { var m = String(x).match(new RegExp('^' + letra + '(\\d+)$')); if (m) max = Math.max(max, Number(m[1])); });
+  return letra + ('000' + (max + 1)).slice(-3);
+}
+function crearConcepto(prefijo, d) {
+  var opId = _t(d.opId); if (!_opIdValido_(opId)) return _def('Falta identificador de operación');
+  var cat = _catalogo_(prefijo);
+  var previo = _tabla_(_hojaCli_('CATALOGO', prefijo), COLS.CATALOGO).filas.filter(function (f) { return _t(f.OpId) === opId; })[0];
+  if (previo) return { success: true, yaExistia: true, codigo: _t(previo.Codigo) };
+  var nombre = _t(d.nombre).toUpperCase().replace(/\s+/g, ' '), categoria = _t(d.categoria).toUpperCase().replace(/\s+/g, ' ');
+  var tipo = _t(d.tipo).toUpperCase();
+  if (!nombre || nombre.length > 45) return _def('Nombre del concepto inválido');
+  if (!categoria || categoria.length > 40) return _def('Escribí la categoría');
+  if (TIPOS.indexOf(tipo) === -1) return _def('Tipo inválido');
+  if (cat.some(function (p) { return p.activo && p.tipo === tipo && p.name === nombre && p.category === categoria; })) return _def('Ya existe ' + nombre + ' en ' + categoria);
+  var precio = (d.precio === '' || d.precio === null || d.precio === undefined) ? '' : _importe_(d.precio);
+  if (precio === null) return _def('Precio sugerido inválido');
+  var codigo = _siguienteCodigo_(cat.map(function (p) { return p.codigo; }), tipo === 'GASTO' ? 'G' : 'I');
+  var orden = cat.filter(function (p) { return p.category === categoria; }).reduce(function (m, p) { return Math.max(m, p.orden); }, 0) + 1;
+  _agregar_(_hojaCli_('CATALOGO', prefijo), [{ Codigo: codigo, Concepto: nombre, Categoria: categoria, Tipo: tipo, PrecioSugerido: precio, Activo: true, Orden: orden, FechaAlta: _ahora_(), OpId: opId }]);
+  return { success: true, codigo: codigo };
+}
+function editarConcepto(prefijo, d) {
+  var p = _catalogo_(prefijo).filter(function (x) { return x.codigo === _t(d.codigo).toUpperCase(); })[0];
+  if (!p) return _def('Concepto inexistente');
+  var c = {};
+  if (d.nombre !== undefined) { var n = _t(d.nombre).toUpperCase(); if (!n || n.length > 45) return _def('Nombre inválido'); c.Concepto = n; }
+  if (d.categoria !== undefined) { var k = _t(d.categoria).toUpperCase(); if (!k) return _def('Categoría inválida'); c.Categoria = k; }
+  if (d.precio !== undefined) { var pr = (d.precio === '' || d.precio === null) ? '' : _importe_(d.precio); if (pr === null) return _def('Precio inválido'); c.PrecioSugerido = pr; }
+  if (d.activo !== undefined) c.Activo = !!d.activo;
+  if (d.orden !== undefined) { var o = Number(d.orden); if (!isFinite(o)) return _def('Orden inválido'); c.Orden = Math.round(o); }
+  _actualizar_(_hojaCli_('CATALOGO', prefijo), p._fila, c);
+  return { success: true, codigo: p.codigo };
+}
+function crearCuenta(prefijo, d) {
+  var opId = _t(d.opId); if (!_opIdValido_(opId)) return _def('Falta identificador de operación');
+  var previo = _tabla_(_hojaCli_('CUENTAS', prefijo), COLS.CUENTAS).filas.filter(function (f) { return _t(f.OpId) === opId; })[0];
+  if (previo) return { success: true, yaExistia: true, codigo: _t(previo.Codigo) };
+  var ctas = _cuentas_(prefijo), nombre = _t(d.nombre).toUpperCase(), tipo = _t(d.tipo).toUpperCase();
+  if (!nombre || nombre.length > 40) return _def('Nombre de cuenta inválido');
+  if (TIPOS_CUENTA.indexOf(tipo) === -1) return _def('Tipo de cuenta inválido');
+  if (ctas.some(function (c) { return c.activo && c.nombre === nombre; })) return _def('Ya existe la cuenta ' + nombre);
+  var saldo = _parseNumeroFlexible(d.saldoInicial);
+  if (!isFinite(saldo) || Math.abs(saldo) >= 1e12) return _def('Saldo inicial inválido');
+  var codigo = _siguienteCodigo_(ctas.map(function (c) { return c.codigo; }), 'C').replace(/^C0/, 'C');
+  _agregar_(_hojaCli_('CUENTAS', prefijo), [{ Codigo: codigo, Cuenta: nombre, TipoCuenta: tipo, SaldoInicial: Math.round(saldo * 100) / 100, Activo: true,
+    Orden: ctas.length + 1, FechaAlta: _ahora_(), OpId: opId }]);
+  return { success: true, codigo: codigo };
+}
+function editarCuenta(prefijo, d) {
+  var c = _cuentas_(prefijo).filter(function (x) { return x.codigo === _t(d.codigo).toUpperCase(); })[0];
+  if (!c) return _def('Cuenta inexistente');
+  var cam = {};
+  if (d.nombre !== undefined) { var n = _t(d.nombre).toUpperCase(); if (!n) return _def('Nombre inválido'); cam.Cuenta = n; }
+  if (d.tipo !== undefined) { var t = _t(d.tipo).toUpperCase(); if (TIPOS_CUENTA.indexOf(t) === -1) return _def('Tipo inválido'); cam.TipoCuenta = t; }
+  if (d.saldoInicial !== undefined) { var s = _parseNumeroFlexible(d.saldoInicial); if (Math.abs(s) >= 1e12) return _def('Saldo inválido'); cam.SaldoInicial = Math.round(s * 100) / 100; }
+  if (d.activo !== undefined) cam.Activo = !!d.activo;
+  _actualizar_(_hojaCli_('CUENTAS', prefijo), c._fila, cam);
+  return { success: true, codigo: c.codigo };
+}
+
+// ===============================
+// DEUDAS (estilo fiados): debo / me deben, pagos parciales
+// ===============================
+function _deudasConSaldo_(prefijo, deudas, movs) {
+  return deudas.map(function (x) {
+    var id = _t(x.DeudaId);
+    var pagos = movs.filter(function (m) { return _t(m.DeudaId) === id && _t(m.Tipo) === 'PAGO_DEUDA' && _t(m.Estado) === 'ACTIVO'; });
+    var pagado = pagos.reduce(function (s, m) { return s + _cent(m.Importe); }, 0);
+    var original = _cent(x.Importe), anulada = _t(x.Estado) === 'ANULADA';
+    var pendiente = anulada ? 0 : Math.max(original - pagado, 0);
+    var venc = _fechaTxt_(x.Vence);
+    return { id: id, sentido: _t(x.Sentido), persona: _t(x.Persona), telefono: _t(x.Telefono), descripcion: _t(x.Descripcion),
+      importe: _pesos(original), pagado: _pesos(pagado), pendiente: _pesos(pendiente), fecha: _fechaTxt_(x.Fecha), vence: venc,
+      vencida: !anulada && pendiente > 0 && venc && venc < _hoy_(),
+      estado: anulada ? 'ANULADA' : (pendiente === 0 ? 'SALDADA' : (pagado > 0 ? 'PARCIAL' : 'PENDIENTE')), cantPagos: pagos.length,
+      pagos: pagos.map(function (m) { return { movId: _t(m.MovId), fecha: _fechaTxt_(m.FechaOperacion), importe: _parseNumeroFlexible(m.Importe), cuenta: _t(m.Cuenta) }; }),
+      motivo: _t(x.MotivoAnulacion) };
+  });
+}
+function getDeudas(prefijo) { return { success: true, deudas: _deudasConSaldo_(prefijo, _deudasFilas_(prefijo), _movs_(prefijo)) }; }
+function _refrescarDeuda_(prefijo, id) {
+  var f = _deudasFilas_(prefijo).filter(function (x) { return _t(x.DeudaId) === id; })[0];
+  if (!f || _t(f.Estado) === 'ANULADA') return;
+  var info = _deudasConSaldo_(prefijo, [f], _movs_(prefijo))[0];
+  var nuevo = info.pendiente === 0 ? 'SALDADA' : 'PENDIENTE';
+  if (_t(f.Estado) !== nuevo) _actualizar_(_hojaCli_('DEUDAS', prefijo), f._fila, { Estado: nuevo });
+}
+function crearDeuda(prefijo, d) {
+  var opId = _t(d.opId); if (!_opIdValido_(opId)) return _def('Falta identificador de operación');
+  var previo = _deudasFilas_(prefijo).filter(function (x) { return _t(x.OpId) === opId; })[0];
+  if (previo) return { success: true, yaExistia: true, id: _t(previo.DeudaId) };
+  var sentido = _t(d.sentido).toUpperCase();
+  if (['DEBO', 'ME_DEBEN'].indexOf(sentido) === -1) return _def('Indicá Debo o Me deben');
+  var persona = _t(d.persona).toUpperCase().slice(0, 60); if (!persona) return _def('Escribí el nombre');
+  var imp = _importe_(d.importe); if (imp === null) return _def('Importe inválido');
+  if (!_fechaValida_(d.fecha)) return _def('Fecha inválida');
+  if (d.vence && !_fechaValida_(d.vence)) return _def('Vencimiento inválido');
+  var cta = null;
+  if (d.moverDinero) {
+    cta = _cuentas_(prefijo).filter(function (c) { return c.codigo === _t(d.cuenta).toUpperCase(); })[0];
+    if (!cta || !cta.activo) return _def('Elegí una cuenta válida');
+  }
+  var id = 'DEU_' + opId.slice(-10).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+  _agregar_(_hojaCli_('DEUDAS', prefijo), [{ DeudaId: id, Sentido: sentido, Persona: persona, Telefono: _t(d.telefono).slice(0, 30), Descripcion: _t(d.descripcion).slice(0, 200),
+    Importe: imp, Fecha: d.fecha, Vence: d.vence || '', Estado: 'PENDIENTE', OpId: opId, MotivoAnulacion: '' }]);
+  if (cta) {
+    _agregar_(_hojaCli_('MOVIMIENTOS', prefijo), [{ FechaRegistro: _ahora_(), FechaOperacion: d.fecha, Tipo: 'DEUDA_ALTA', Categoria: '',
+      Concepto: (sentido === 'DEBO' ? 'PRÉSTAMO RECIBIDO DE ' : 'PRÉSTAMO DADO A ') + persona, Codigo: '', Descripcion: _t(d.descripcion).slice(0, 200), Importe: imp,
+      Cuenta: cta.codigo, CuentaDestino: '', MovId: 'ALT_' + opId, Renglon: 1, Estado: 'ACTIVO', MotivoAnulacion: '', DeudaId: id, CompromisoId: '', Periodo: '', FechaAnulacion: '' }]);
+  }
+  return { success: true, id: id };
+}
+function pagarDeuda(prefijo, d) {
+  var movId = _t(d.movId);
+  if (!_movIdValido_(movId)) return _def('Identificador inválido');
+  if (_buscarMovId_(prefijo, movId).length) return { success: true, yaExistia: true, movId: movId };
+  var f = _deudasFilas_(prefijo).filter(function (x) { return _t(x.DeudaId) === _t(d.deudaId); })[0];
+  if (!f) return _def('Deuda inexistente');
+  if (_t(f.Estado) === 'ANULADA') return _def('La deuda está anulada');
+  var info = _deudasConSaldo_(prefijo, [f], _movs_(prefijo))[0];
+  var imp = _importe_(d.importe); if (imp === null) return _def('Importe inválido');
+  if (info.pendiente <= 0) return _def('La deuda ya está saldada');
+  if (Math.round(imp * 100) > Math.round(info.pendiente * 100)) return _def('Supera lo pendiente ($' + info.pendiente + ')');
+  var cta = _cuentas_(prefijo).filter(function (c) { return c.codigo === _t(d.cuenta).toUpperCase(); })[0];
+  if (!cta || !cta.activo) return _def('Elegí una cuenta válida');
+  if (!_fechaValida_(d.fecha)) return _def('Fecha inválida');
+  _agregar_(_hojaCli_('MOVIMIENTOS', prefijo), [{ FechaRegistro: _ahora_(), FechaOperacion: d.fecha, Tipo: 'PAGO_DEUDA', Categoria: '',
+    Concepto: (_t(f.Sentido) === 'DEBO' ? 'PAGO A ' : 'COBRO DE ') + _t(f.Persona), Codigo: '', Descripcion: _t(d.descripcion).slice(0, 200), Importe: imp,
+    Cuenta: cta.codigo, CuentaDestino: '', MovId: movId, Renglon: 1, Estado: 'ACTIVO', MotivoAnulacion: '', DeudaId: _t(f.DeudaId), CompromisoId: '', Periodo: '', FechaAnulacion: '' }]);
+  _refrescarDeuda_(prefijo, _t(f.DeudaId));
+  return { success: true, movId: movId, pendiente: _pesos(Math.round(info.pendiente * 100) - Math.round(imp * 100)) };
+}
+function anularDeuda(prefijo, d) {
+  var f = _deudasFilas_(prefijo).filter(function (x) { return _t(x.DeudaId) === _t(d.deudaId); })[0];
+  if (!f) return _def('Deuda inexistente');
+  if (_t(f.Estado) === 'ANULADA') return { success: true, yaEstaba: true };
+  var motivo = _t(d.motivo); if (motivo.length < 3) return _def('Escribí el motivo');
+  var movs = _movs_(prefijo).filter(function (m) { return _t(m.DeudaId) === _t(f.DeudaId) && _t(m.Estado) === 'ACTIVO'; });
+  if (movs.some(function (m) { return _t(m.Tipo) === 'PAGO_DEUDA'; })) return _def('Tiene pagos activos: anulalos primero desde Reportes');
+  movs.forEach(function (m) { _actualizar_(_hojaCli_('MOVIMIENTOS', prefijo), m._fila, { Estado: 'ANULADO', MotivoAnulacion: 'Deuda anulada: ' + motivo, FechaAnulacion: _ahora_() }); });
+  _actualizar_(_hojaCli_('DEUDAS', prefijo), f._fila, { Estado: 'ANULADA', MotivoAnulacion: motivo.slice(0, 200) });
+  return { success: true };
+}
+
+// ===============================
+// COMPROMISOS MENSUALES (no descuentan solos)
+// ===============================
+function _compromisosMes_(prefijo, periodo, movs) {
+  var cat = {}; _catalogo_(prefijo).forEach(function (p) { cat[p.codigo] = p; });
+  var py = periodo.split('-').map(Number), dias = new Date(py[0], py[1], 0).getDate();
+  return _tabla_(_hojaCli_('COMPROMISOS', prefijo), COLS.COMPROMISOS).filas
+    .filter(function (c) { return c.Activo === true || _esActivoFlag_(c.Activo); })
+    .map(function (c) {
+      var id = _t(c.CompromisoId);
+      var pagos = movs.filter(function (m) { return _t(m.CompromisoId) === id && _t(m.Periodo) === periodo && _t(m.Estado) === 'ACTIVO' && _t(m.Tipo) === 'GASTO'; });
+      var pagado = pagos.reduce(function (s, m) { return s + _cent(m.Importe); }, 0);
+      var est = _parseNumeroFlexible(c.ImporteEstimado), dia = Math.min(Number(c.DiaVence) || 1, dias);
+      var estado = pagado === 0 ? 'PENDIENTE' : (est > 0 && pagado < Math.round(est * 100) ? 'PARCIAL' : 'PAGADO');
+      var p = cat[_t(c.CodigoConcepto).toUpperCase()];
+      return { id: id, nombre: _t(c.Nombre), codigo: _t(c.CodigoConcepto).toUpperCase(), concepto: p ? p.name : '', conceptoActivo: !!(p && p.activo),
+        estimado: est > 0 ? est : null, diaVence: Number(c.DiaVence) || 1, vence: periodo + '-' + ('0' + dia).slice(-2), periodo: periodo,
+        pagado: _pesos(pagado), estado: estado, cuentaSugerida: _t(c.CuentaSugerida).toUpperCase() };
+    }).sort(function (a, b) { return a.vence < b.vence ? -1 : 1; });
+}
+function getCompromisos(prefijo, d) {
+  var periodo = _periodoValido_(d.periodo) ? d.periodo : _hoy_().slice(0, 7);
+  var todos = _tabla_(_hojaCli_('COMPROMISOS', prefijo), COLS.COMPROMISOS).filas.map(function (c) {
+    return { id: _t(c.CompromisoId), nombre: _t(c.Nombre), codigo: _t(c.CodigoConcepto).toUpperCase(), estimado: _parseNumeroFlexible(c.ImporteEstimado) || null,
+      diaVence: Number(c.DiaVence) || 1, cuentaSugerida: _t(c.CuentaSugerida).toUpperCase(), activo: c.Activo === true || _esActivoFlag_(c.Activo) };
+  });
+  return { success: true, periodo: periodo, compromisos: _compromisosMes_(prefijo, periodo, _movs_(prefijo)), todos: todos };
+}
+function _datosCompromiso_(prefijo, d, nuevo) {
+  var r = {};
+  if (nuevo || d.nombre !== undefined) { var n = _t(d.nombre).toUpperCase(); if (!n || n.length > 40) return { err: 'Nombre inválido' }; r.Nombre = n; }
+  if (nuevo || d.codigo !== undefined) {
+    var p = _catalogo_(prefijo).filter(function (x) { return x.codigo === _t(d.codigo).toUpperCase(); })[0];
+    if (!p || !p.activo) return { err: 'Elegí un concepto de gasto activo' };
+    if (p.tipo !== 'GASTO') return { err: 'Un compromiso usa un concepto de GASTO' };
+    r.CodigoConcepto = p.codigo;
+  }
+  if (nuevo || d.estimado !== undefined) { var e = (d.estimado === '' || d.estimado === null || d.estimado === undefined) ? '' : _importe_(d.estimado); if (e === null) return { err: 'Importe estimado inválido' }; r.ImporteEstimado = e; }
+  if (nuevo || d.diaVence !== undefined) { var dv = Number(d.diaVence); if (!(dv >= 1 && dv <= 31 && Math.floor(dv) === dv)) return { err: 'Día de vencimiento: 1 a 31' }; r.DiaVence = dv; }
+  if (nuevo || d.cuentaSugerida !== undefined) r.CuentaSugerida = _t(d.cuentaSugerida).toUpperCase();
+  return { r: r };
+}
+function crearCompromiso(prefijo, d) {
+  var opId = _t(d.opId); if (!_opIdValido_(opId)) return _def('Falta identificador de operación');
+  var previo = _tabla_(_hojaCli_('COMPROMISOS', prefijo), COLS.COMPROMISOS).filas.filter(function (x) { return _t(x.OpId) === opId; })[0];
+  if (previo) return { success: true, yaExistia: true, id: _t(previo.CompromisoId) };
+  var x = _datosCompromiso_(prefijo, d, true); if (x.err) return _def(x.err);
+  x.r.CompromisoId = 'CMP_' + opId.slice(-8).toUpperCase().replace(/[^A-Z0-9]/g, 'X'); x.r.Activo = true; x.r.OpId = opId;
+  _agregar_(_hojaCli_('COMPROMISOS', prefijo), [x.r]);
+  return { success: true, id: x.r.CompromisoId };
+}
+function editarCompromiso(prefijo, d) {
+  var f = _tabla_(_hojaCli_('COMPROMISOS', prefijo), COLS.COMPROMISOS).filas.filter(function (c) { return _t(c.CompromisoId) === _t(d.id); })[0];
+  if (!f) return _def('Compromiso inexistente');
+  var x = _datosCompromiso_(prefijo, d, false); if (x.err) return _def(x.err);
+  if (d.activo !== undefined) x.r.Activo = !!d.activo;
+  _actualizar_(_hojaCli_('COMPROMISOS', prefijo), f._fila, x.r);
+  return { success: true, id: _t(f.CompromisoId) };
+}
+
+// ===============================
+// 🐞 INCIDENCIAS (hoja global, con prefijo)
+// ===============================
+function _sinSecretos_(s) {
+  return String(s || '').replace(/\bCLI_[A-Z]{2,3}_[A-Za-z0-9]+/g, '[OCULTO]').replace(/\b[a-f0-9]{24,}\b/gi, '[OCULTO]')
+    .replace(/\b\d[\d -]{11,}\d\b/g, '[NÚMERO OCULTO]').replace(/\bpin\s*[:=]?\s*\d{4,6}\b/gi, 'PIN [OCULTO]');
+}
+function reportarIncidencia(prefijo, d) {
+  var opId = _t(d.opId); if (!_opIdValido_(opId)) return _def('Falta identificador de operación');
+  var t = _tabla_('INCIDENCIAS', COLS.INCIDENCIAS);
+  var previo = t.filas.filter(function (x) { return _t(x.OpId) === opId; })[0];
+  if (previo) return { success: true, yaExistia: true, id: _t(previo.Id) };
+  var tipo = _t(d.tipo).toUpperCase(); if (['ERROR', 'SUGERENCIA'].indexOf(tipo) === -1) return _def('Elegí ERROR o SUGERENCIA');
+  var desc = _sinSecretos_(_t(d.descripcion)).slice(0, 2000); if (desc.length < 5) return _def('Contá qué pasó (mínimo 5 letras)');
+  var ahora = _ahora_();
+  var id = 'INC-' + ahora.slice(0, 10).replace(/-/g, '') + '-' + Utilities.getUuid().replace(/-/g, '').slice(0, 6).toUpperCase();
+  _agregar_('INCIDENCIAS', [{ Id: id, FechaServidor: ahora, Estado: 'NUEVO', Prefijo: prefijo, Tipo: tipo, Descripcion: desc,
+    Pantalla: _sinSecretos_(_t(d.pantalla)).slice(0, 80), VersionApp: _t(d.version).slice(0, 20), Navegador: _sinSecretos_(_t(d.navegador)).slice(0, 300), OpId: opId, NotasRevision: '' }]);
+  return { success: true, id: id, fecha: ahora };
+}
+
+function verificarOperacion(prefijo, d) {
+  var id = _t(d.id);
+  if (!id) return _def('Falta id');
+  if (_buscarMovId_(prefijo, id).length) return { success: true, existe: true };
+  var hojas = [['CATALOGO', 'OpId'], ['CUENTAS', 'OpId'], ['DEUDAS', 'OpId'], ['COMPROMISOS', 'OpId']];
+  for (var i = 0; i < hojas.length; i++) {
+    if (_tabla_(_hojaCli_(hojas[i][0], prefijo), COLS[hojas[i][0]]).filas.some(function (f) { return _t(f[hojas[i][1]]) === id; })) return { success: true, existe: true };
+  }
+  if (_tabla_('INCIDENCIAS', COLS.INCIDENCIAS).filas.some(function (f) { return _t(f.OpId) === id; })) return { success: true, existe: true };
+  return { success: true, existe: false };
+}
+
+// ===============================
+// INSTALACIÓN / DIAGNÓSTICO (editor)
+// ===============================
+function instalar() {
+  var ss = _ss_();
+  if (!ss) { Logger.log('❌ El script no está vinculado a una planilla'); return; }
+  ['CLIENTES', 'PERFILES', 'PLANTILLA_CATALOGO', 'PLANTILLA_CUENTAS', 'INCIDENCIAS'].forEach(function (n) {
+    var existia = !!ss.getSheetByName(n);
+    var h = _crearHojaSiFalta_(n, COLS[n]);
+    var enc = h.getRange(1, 1, 1, Math.max(h.getLastColumn(), 1)).getValues()[0].map(function (x) { return String(x).trim(); });
+    var faltan = COLS[n].filter(function (c) { return enc.indexOf(c) === -1; });
+    Logger.log((existia ? '✅ ' : '🆕 ') + n + (faltan.length ? ' — ⚠️ faltan columnas: ' + faltan.join(', ') : ''));
+  });
+  var hi = ss.getSheetByName('INCIDENCIAS');
+  hi.getRange(2, COLS.INCIDENCIAS.indexOf('Estado') + 1, 999, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(ESTADOS_INCIDENCIA, true).setAllowInvalid(false).build());
+  var nPerf = _tabla_('PERFILES', COLS.PERFILES).filas.length, nCat = _tabla_('PLANTILLA_CATALOGO', COLS.PLANTILLA_CATALOGO).filas.length;
+  Logger.log('Perfiles: ' + nPerf + ' · Conceptos de plantilla: ' + nCat + (nPerf ? '' : ' — ⚠️ cargá las plantillas (archivo SEBA_BALANCE_STAGING.xlsx)'));
+  Logger.log(PropertiesService.getScriptProperties().getProperty('ADMIN_CLAVE_HASH') ? '✅ Clave admin configurada' : '⚠️ Falta la clave admin: ejecutá generarClaveAdmin()');
+}
+function diagnostico() {
+  instalar();
+  try { Logger.log('Clientes: ' + _tabla_('CLIENTES', COLS.CLIENTES).filas.map(function (c) { return _t(c.Prefijo) + '(' + _t(c.Estado) + ')'; }).join(', ')); } catch (e) { Logger.log(e.message); }
+}

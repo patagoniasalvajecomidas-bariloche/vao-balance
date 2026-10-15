@@ -662,10 +662,10 @@ body { overflow-x:hidden; }
             <div class="form-grupo"><label class="form-label">Contacto</label><input type="text" class="form-input" id="altaContacto" placeholder="María García"></div>
             <div class="form-grupo"><label class="form-label">Teléfono / WhatsApp</label><input type="text" class="form-input" id="altaTelefono" placeholder="549294..."></div>
         </div>
-        <div class="form-grupo"><label class="form-label">Correo</label><input type="email" class="form-input" id="altaCorreo" placeholder="maria@correo.com"></div>
+        <div class="form-grupo"><label class="form-label">Correo</label><input type="text" inputmode="email" class="form-input" id="altaCorreo" placeholder="maria@correo.com" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" oninput="const v=this.value.toLowerCase();if(v!==this.value){const p=this.selectionStart;this.value=v;this.setSelectionRange(p,p);}" onchange="this.value=SEBA.correo(this.value)" style="text-transform:none;"></div>
         <div id="altaPerfilDesc" style="font-size:0.8rem;color:var(--gris);margin-bottom:6px;"></div>
         <div class="modal-footer">
-            <button class="btn-cancelar" onclick="cerrarModalAlta()">Cancelar</button>
+            <button class="btn-cancelar" onclick="cancelarAlta()">Cancelar</button>
             <button class="btn-primario btn-verde" onclick="crearCliente()" id="btnCrear" style="font-size:0.9rem;padding:13px;justify-content:center;">Crear cliente</button>
         </div>
     </div>
@@ -696,7 +696,7 @@ body { overflow-x:hidden; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 1;
+window.APP_VERSION = 2;
 const S = window.SEBA;
 document.addEventListener('DOMContentLoaded', function () {
     var tag = document.createElement('span');
@@ -751,6 +751,7 @@ async function cargarPerfiles() {
     perfiles = (r && r.perfiles) || [];
     document.getElementById('altaPerfil').innerHTML = perfiles.length ? '<option value="">Elegí...</option>' + perfiles.map(p => '<option value="' + S.esc(p.id) + '">' + S.esc(p.nombre) + '</option>').join('')
         : '<option value="">(sin perfiles: cargá la hoja PERFILES)</option>';
+    if (S.ls.get('seba_borrador_ADMIN_alta_cliente') && !document.getElementById('modalAlta').classList.contains('visible')) abrirModalAlta();
     document.getElementById('altaPerfil').onchange = function () { const p = perfiles.find(x => x.id === this.value); document.getElementById('altaPerfilDesc').textContent = p ? p.descripcion + ' — se copian sus categorías y cuentas de partida.' : ''; };
 }
 async function cargarClientes() {
@@ -796,8 +797,20 @@ function actualizarBarraAccionMovil() {
 }
 function accionBarraToggleActivo() { const c = clientesCargados.find(x => x.prefijo === clienteSeleccionadoPrefijo); if (c) toggleActivo(c.prefijo, c.activo); }
 function accionBarraResetPin() { if (clienteSeleccionadoPrefijo) resetPin(clienteSeleccionadoPrefijo); }
-function abrirModalAlta() { document.getElementById('modalAlta').classList.add('visible'); document.getElementById('altaPrefijo').focus(); }
+// Regla de oro: el alta se va guardando en esta compu mientras escribís (se recupera si se cierra la página).
+let borradorAlta = null;
+function abrirModalAlta() {
+    borradorAlta = S.borrador('alta_cliente', '#modalAlta');
+    if (borradorAlta.restaurar()) { validarPrefijo(); toast('📝 Recuperé el alta que estabas escribiendo', 'verde'); const p = perfiles.find(x => x.id === document.getElementById('altaPerfil').value); document.getElementById('altaPerfilDesc').textContent = p ? p.descripcion + ' — se copian sus categorías y cuentas de partida.' : ''; }
+    document.getElementById('modalAlta').classList.add('visible'); document.getElementById('altaPrefijo').focus();
+}
+function cancelarAlta() {
+    const algo = ['altaPrefijo', 'altaNombre', 'altaContacto', 'altaTelefono', 'altaCorreo'].some(id => document.getElementById(id).value.trim());
+    if (algo && !confirm('¿Descartar lo que escribiste?')) return;
+    cerrarModalAlta();
+}
 function cerrarModalAlta() {
+    if (borradorAlta) { borradorAlta.borrar(); borradorAlta = null; }
     document.getElementById('modalAlta').classList.remove('visible');
     ['altaPrefijo', 'altaNombre', 'altaContacto', 'altaTelefono', 'altaCorreo'].forEach(id => { const e = document.getElementById(id); e.value = ''; e.classList.remove('error'); });
     document.getElementById('altaPerfil').value = ''; document.getElementById('prefijoCheck').textContent = ''; document.getElementById('altaPerfilDesc').textContent = '';
@@ -820,9 +833,9 @@ async function crearCliente() {
     if (!ok) { toast('Completá los campos obligatorios', 'rojo'); return; }
     if (clientesCargados.some(c => c.prefijo === prefijo)) { toast('El prefijo ' + prefijo + ' ya existe', 'rojo'); return; }
     const btn = document.getElementById('btnCrear'); btn.innerHTML = '<span class="spinner"></span> Creando...'; btn.disabled = true; creando = true;
-    const res = await api('crearCliente', { prefijo, nombre, perfil, contacto: v('altaContacto'), telefono: v('altaTelefono'), correo: v('altaCorreo') });
+    const res = await api('crearCliente', { prefijo, nombre, perfil, contacto: v('altaContacto'), telefono: v('altaTelefono'), correo: S.correo(v('altaCorreo')) });
     btn.innerHTML = 'Crear cliente'; btn.disabled = false; creando = false;
-    if (!res) { alert('No hubo respuesta del servidor.\n\nPuede que el cliente se haya creado igual. Recargo la lista: si ' + prefijo + ' aparece, usá 🔑 Reset PIN para obtener su PIN.'); cerrarModalAlta(); cargarClientes(); return; }
+    if (!res) { alert('No hubo respuesta del servidor.\n\nPuede que el cliente se haya creado igual. Recargo la lista: si ' + prefijo + ' aparece, usá 🔑 Reset PIN para obtener su PIN. Si NO aparece, tocá Crear cliente de nuevo: lo que escribiste sigue acá.'); cargarClientes(); return; }
     if (manejarSesion(res)) return;
     if (res.error) { toast('Error: ' + res.error, 'rojo'); return; }
     cerrarModalAlta(); await cargarClientes();

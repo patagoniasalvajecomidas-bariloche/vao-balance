@@ -85,6 +85,63 @@
     return paletas[h % paletas.length];
   };
 
+  // ── REGLA DE ORO: todo lo que se escribe en un formulario se guarda solo en este dispositivo ──
+  // Si la página se cierra o se recarga, al volver a abrir el formulario se recupera.
+  // Nunca guarda PIN ni claves (type=password o data-no-borrador). Se borra al guardar con éxito o al cancelar a propósito.
+  // uso: const b = S.borrador('nombre', '#contenedor', { extra: () => ({...}), alRestaurar: obj => {...} });
+  //      b.restaurar()  → true si había algo   ·   b.borrar()
+  S.borrador = function (nombre, contenedor, opc) {
+    opc = opc || {};
+    var key = 'seba_borrador_' + (S.prefijo || 'ADMIN') + '_' + nombre;
+    var el = function () { return typeof contenedor === 'string' ? document.querySelector(contenedor) : contenedor; };
+    var campos = function () {
+      var c = el(); if (!c) return [];
+      return Array.prototype.filter.call(c.querySelectorAll('input[id], select[id], textarea[id]'), function (x) {
+        return x.type !== 'password' && !x.hasAttribute('data-no-borrador');
+      });
+    };
+    var b = {
+      guardar: function () {
+        var datos = {}, algo = false;
+        campos().forEach(function (x) {
+          var v = (x.type === 'checkbox' || x.type === 'radio') ? x.checked : x.value;
+          datos[x.id] = v;
+          if (x.type !== 'checkbox' && x.type !== 'radio' && x.type !== 'date' && String(v).trim()) algo = true;
+        });
+        var extra = opc.extra ? opc.extra() : null;
+        if (!algo && !opc.siempre) { S.ls.del(key); return; }
+        S.ls.set(key, { campos: datos, extra: extra, cuando: Date.now() });
+      },
+      restaurar: function () {
+        var g = S.ls.get(key);
+        if (!g || !g.campos) return false;
+        campos().forEach(function (x) {
+          if (!(x.id in g.campos)) return;
+          if (x.type === 'checkbox' || x.type === 'radio') x.checked = !!g.campos[x.id]; else x.value = g.campos[x.id];
+        });
+        if (opc.alRestaurar && g.extra) opc.alRestaurar(g.extra);
+        return true;
+      },
+      hay: function () { return !!S.ls.get(key); },
+      borrar: function () { S.ls.del(key); }
+    };
+    // Un solo escucha por contenedor: guarda en el borrador ACTIVO (el último creado para ese contenedor).
+    var c = el();
+    if (c) {
+      c._sebaBorrador = b;
+      if (!c._sebaEscucha) {
+        c._sebaEscucha = true;
+        var f = function () { if (c._sebaBorrador) c._sebaBorrador.guardar(); };
+        c.addEventListener('input', f); c.addEventListener('change', f);
+      }
+    }
+    b.soltar = function () { if (c && c._sebaBorrador === b) c._sebaBorrador = null; };
+    var borrarOrig = b.borrar; b.borrar = function () { borrarOrig(); b.soltar(); };
+    return b;
+  };
+  // Correo: siempre en minúsculas y sin espacios.
+  S.correo = function (txt) { return String(txt || '').trim().toLowerCase().replace(/\s+/g, ''); };
+
   S.toast = function (msg, tipo, ms) {
     var t = document.getElementById('toast');
     if (!t) return;

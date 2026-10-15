@@ -344,7 +344,7 @@ button { font-family:inherit; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 1;
+window.APP_VERSION = 2;
 window.SEBA_BADGE_BOTTOM = 84;
 const S = window.SEBA;
 const PREFIJO = S.prefijo;
@@ -413,7 +413,7 @@ async function verificarSesion() {
         else { document.getElementById('overlayPinTitulo').textContent = 'Sin conexión'; document.getElementById('overlayPinRed').style.display = 'block'; }
     } else if (ok) {
         ocultarOverlayPin();
-        resolverPendientes();
+        resolverPendientes().then(reabrirBorrador);
     }
 }
 
@@ -765,6 +765,15 @@ async function resolverPendientes() {
     }
 }
 
+// Si la página se cerró con un formulario a medio cargar, se vuelve a abrir solo (regla de oro).
+function reabrirBorrador() {
+    if (modalAbierto) return;
+    const pre = 'seba_borrador_' + PREFIJO + '_';
+    if (S.ls.get(pre + 'transferencia') && !S.ls.get(K_TRANSF)) abrirTransferir();
+    else if (S.ls.get(pre + 'concepto_nuevo_GASTO') || S.ls.get(pre + 'concepto_nuevo_INGRESO')) abrirCatalogo();
+    else if (S.ls.get(pre + 'cuenta_nueva')) abrirCuentas();
+}
+
 // ========== HOY ==========
 async function abrirHoy() {
     abrirModal('modalHoy');
@@ -793,7 +802,7 @@ async function abrirHoy() {
 }
 
 // ========== TRANSFERIR ==========
-let trOrigen = '', trDestino = '';
+let trOrigen = '', trDestino = '', borrTr = null;
 function abrirTransferir() {
     const t = S.ls.get(K_TRANSF);
     const act = cuentas.filter(c => c.activo !== false);
@@ -806,6 +815,8 @@ function abrirTransferir() {
     } else {
         trOrigen = act[0].codigo; trDestino = act[1].codigo;
         document.getElementById('trImporte').value = ''; document.getElementById('trFecha').value = S.hoy(); document.getElementById('trDesc').value = '';
+        borrTr = S.borrador('transferencia', '#modalTransf', { extra: () => ({ o: trOrigen, d: trDestino }), alRestaurar: x => { trOrigen = x.o; trDestino = x.d; } });
+        if (borrTr.restaurar()) S.toast('📝 Recuperé la transferencia que estabas cargando', 'verde');
     }
     ['trImporte', 'trFecha', 'trDesc'].forEach(id => document.getElementById(id).disabled = !!t);
     document.getElementById('avisoTransf').style.display = t ? 'block' : 'none';
@@ -818,8 +829,8 @@ function renderTrCuentas() {
     cuentaBotones('trOrigen', trOrigen, 'trElegirO', bloq);
     cuentaBotones('trDestino', trDestino, 'trElegirD', bloq);
 }
-function trElegirO(c) { trOrigen = c; if (trDestino === c) trDestino = ''; renderTrCuentas(); }
-function trElegirD(c) { trDestino = c; if (trOrigen === c) trOrigen = ''; renderTrCuentas(); }
+function trElegirO(c) { trOrigen = c; if (trDestino === c) trDestino = ''; renderTrCuentas(); if (borrTr) borrTr.guardar(); }
+function trElegirD(c) { trDestino = c; if (trOrigen === c) trOrigen = ''; renderTrCuentas(); if (borrTr) borrTr.guardar(); }
 async function confirmarTransferencia() {
     if (enviando) return;
     const err = document.getElementById('trError'), btn = document.getElementById('trBtn');
@@ -833,6 +844,7 @@ async function confirmarTransferencia() {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { err.textContent = 'Elegí la fecha'; return; }
         t = { movId: S.nuevoMovId(), origen: trOrigen, destino: trDestino, importe: imp, fecha: fecha, descripcion: document.getElementById('trDesc').value.trim().slice(0, 80) };
         if (!S.ls.set(K_TRANSF, t)) { err.textContent = 'No se pudo guardar en este celular'; return; }
+        if (borrTr) { borrTr.borrar(); borrTr = null; }
         ['trImporte', 'trFecha', 'trDesc'].forEach(id => document.getElementById(id).disabled = true);
         renderTrCuentas();
     }
@@ -859,7 +871,11 @@ async function confirmarTransferencia() {
 
 // ========== CATÁLOGO ==========
 let catTipo = 'GASTO', catEdit = null, opNuevoConcepto = null;
-function abrirCatalogo() { catTipo = boleta.tipo; catEdit = null; renderCatalogo(); abrirModal('modalCatalogo'); }
+function abrirCatalogo() {
+    catTipo = boleta.tipo; catEdit = null;
+    for (const t of [boleta.tipo, boleta.tipo === 'GASTO' ? 'INGRESO' : 'GASTO']) if (S.ls.get('seba_borrador_' + PREFIJO + '_concepto_nuevo_' + t)) { catTipo = t; catEdit = { nuevo: true, tipo: t, name: '', category: '', price: null, activo: true }; break; }
+    renderCatalogo(); abrirModal('modalCatalogo');
+}
 function catTab(t) { catTipo = t; catEdit = null; renderCatalogo(); }
 function catalogoCompleto() { return (estado && estado.catalogoCompleto) || productos; }
 function renderCatalogo() {
@@ -875,8 +891,14 @@ function renderCatalogo() {
             (p.price ? 'Sugerido ' + S.fmt(p.price) + ' · ' : '') + (p.uso || 0) + ' uso' + (p.uso === 1 ? '' : 's') + '</div></div>' + (p.activo === false ? '<span class="badge r">oculto</span>' : '<span style="color:var(--gris)">›</span>') + '</div>').join('')).join('') +
         '<div style="height:16px"></div>';
 }
+function volverCatalogo() {
+    if (borrCon && borrCon.hay() && !confirm('¿Descartar lo que escribiste?')) return;
+    if (borrCon) { borrCon.borrar(); borrCon = null; }
+    catEdit = null; renderCatalogo();
+}
 function nuevoConcepto() { catEdit = { nuevo: true, tipo: catTipo, name: '', category: '', price: null, activo: true }; opNuevoConcepto = null; renderCatalogo(); }
 function editarConcepto(cod) { const p = catalogoCompleto().find(x => x.codigo === cod); if (p) { catEdit = Object.assign({}, p); renderCatalogo(); } }
+let borrCon = null;
 function renderFormConcepto() {
     const e = catEdit, cats = [...new Set(catalogoCompleto().filter(p => p.tipo === e.tipo).map(p => p.category))].sort();
     document.getElementById('catContenido').innerHTML = '<div class="form-scroll">' +
@@ -885,7 +907,9 @@ function renderFormConcepto() {
         '<div class="form-grupo"><label class="form-label">Precio sugerido (opcional)</label><input class="form-input" id="cePrecio" inputmode="decimal" value="' + (e.price ? String(e.price).replace('.', ',') : '') + '" placeholder="Vacío = lo escribís cada vez"></div>' +
         (e.nuevo ? '' : '<label class="check"><input type="checkbox" id="ceActivo"' + (e.activo !== false ? ' checked' : '') + '> Visible en la boleta</label><div style="font-size:0.75rem;color:var(--gris);margin:-6px 0 12px;">Ocultarlo no borra los movimientos que ya tiene.</div>') +
         '<div class="form-error" id="ceError"></div>' +
-        '<button class="btn-guardar" id="ceBtn" onclick="guardarConcepto()">💾 Guardar</button><button class="btn-sec" onclick="catEdit=null;renderCatalogo()">← Volver a la lista</button></div>';
+        '<button class="btn-guardar" id="ceBtn" onclick="guardarConcepto()">💾 Guardar</button><button class="btn-sec" onclick="volverCatalogo()">← Volver a la lista</button></div>';
+    borrCon = S.borrador('concepto_' + (e.nuevo ? 'nuevo_' + e.tipo : e.codigo), '#catContenido', { extra: () => ({ op: opNuevoConcepto }), alRestaurar: x => { if (e.nuevo && x.op) opNuevoConcepto = x.op; } });
+    if (borrCon.restaurar()) S.toast('📝 Recuperé lo que estabas escribiendo', 'verde');
 }
 async function guardarConcepto() {
     if (enviando) return;
@@ -898,14 +922,14 @@ async function guardarConcepto() {
     enviando = true; btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
     let r;
     if (e.nuevo) {
-        if (!opNuevoConcepto) opNuevoConcepto = S.nuevoOpId();
+        if (!opNuevoConcepto) { opNuevoConcepto = S.nuevoOpId(); if (borrCon) borrCon.guardar(); }
         r = await S.api('crearConcepto', { opId: opNuevoConcepto, nombre: nombre, categoria: cat, tipo: e.tipo, precio: precio });
     } else {
         r = await S.api('editarConcepto', { codigo: e.codigo, nombre: nombre, categoria: cat, precio: precio, activo: document.getElementById('ceActivo').checked });
     }
     enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar';
     if (!r || !r.success) { if (r && r.definitivo) opNuevoConcepto = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
-    opNuevoConcepto = null; catEdit = null;
+    opNuevoConcepto = null; catEdit = null; if (borrCon) { borrCon.borrar(); borrCon = null; }
     S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde');
     await cargarEstado(true);
     renderCatalogo();
@@ -914,7 +938,10 @@ async function guardarConcepto() {
 // ========== CUENTAS ==========
 let ctaEdit = null, opNuevaCuenta = null;
 const TIPOS_CUENTA = { EFECTIVO: 'Efectivo', BANCO: 'Banco', BILLETERA: 'Billetera virtual', TARJETA: 'Tarjeta', OTRA: 'Otra' };
-function abrirCuentas() { ctaEdit = null; renderCuentas(); abrirModal('modalCuentas'); }
+function abrirCuentas() {
+    ctaEdit = S.ls.get('seba_borrador_' + PREFIJO + '_cuenta_nueva') ? { nuevo: true, nombre: '', tipo: 'EFECTIVO', saldoInicial: 0, activo: true } : null;
+    renderCuentas(); abrirModal('modalCuentas');
+}
 function renderCuentas() {
     const cont = document.getElementById('ctaContenido');
     if (!estado) { cont.innerHTML = '<div class="vacio">Sin conexión.</div>'; return; }
@@ -927,8 +954,14 @@ function renderCuentas() {
         '<div style="padding:12px 16px;"><button class="btn-guardar" onclick="nuevaCuenta()">＋ Nueva cuenta</button>' +
         '<div style="font-size:0.75rem;color:var(--gris);">El saldo se calcula solo: saldo inicial + ingresos − gastos ± transferencias y deudas. Para que coincida con la realidad, cargá el saldo inicial de cada cuenta.</div></div>';
 }
+function volverCuentas() {
+    if (borrCta && borrCta.hay() && !confirm('¿Descartar lo que escribiste?')) return;
+    if (borrCta) { borrCta.borrar(); borrCta = null; }
+    ctaEdit = null; renderCuentas();
+}
 function nuevaCuenta() { ctaEdit = { nuevo: true, nombre: '', tipo: 'EFECTIVO', saldoInicial: 0, activo: true }; opNuevaCuenta = null; renderCuentas(); }
 function editarCuenta(cod) { const c = cuentas.find(x => x.codigo === cod); if (c) { ctaEdit = Object.assign({}, c); renderCuentas(); } }
+let borrCta = null;
 function renderFormCuenta() {
     const e = ctaEdit;
     document.getElementById('ctaContenido').innerHTML = '<div class="form-scroll">' +
@@ -936,7 +969,9 @@ function renderFormCuenta() {
         '<div class="form-grupo"><label class="form-label">Tipo</label><select class="form-input" id="cuTipo">' + Object.keys(TIPOS_CUENTA).map(k => '<option value="' + k + '"' + (k === e.tipo ? ' selected' : '') + '>' + TIPOS_CUENTA[k] + '</option>').join('') + '</select></div>' +
         '<div class="form-grupo"><label class="form-label">Saldo inicial</label><input class="form-input" id="cuSaldo" inputmode="decimal" value="' + (e.saldoInicial ? String(e.saldoInicial).replace('.', ',') : '') + '" placeholder="0"><div style="font-size:0.72rem;color:var(--gris);margin-top:4px;">Lo que había en la cuenta antes de empezar a usar SEBA BALANCE. Si es negativo, escribí -.</div></div>' +
         (e.nuevo ? '' : '<label class="check"><input type="checkbox" id="cuActivo"' + (e.activo !== false ? ' checked' : '') + '> Cuenta activa</label>') +
-        '<div class="form-error" id="cuError"></div><button class="btn-guardar" id="cuBtn" onclick="guardarCuenta()">💾 Guardar</button><button class="btn-sec" onclick="ctaEdit=null;renderCuentas()">← Volver</button></div>';
+        '<div class="form-error" id="cuError"></div><button class="btn-guardar" id="cuBtn" onclick="guardarCuenta()">💾 Guardar</button><button class="btn-sec" onclick="volverCuentas()">← Volver</button></div>';
+    borrCta = S.borrador('cuenta_' + (e.nuevo ? 'nueva' : e.codigo), '#ctaContenido', { extra: () => ({ op: opNuevaCuenta }), alRestaurar: x => { if (e.nuevo && x.op) opNuevaCuenta = x.op; } });
+    if (borrCta.restaurar()) S.toast('📝 Recuperé lo que estabas escribiendo', 'verde');
 }
 async function guardarCuenta() {
     if (enviando) return;
@@ -953,11 +988,11 @@ async function guardarCuenta() {
     }
     enviando = true; btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
     let r;
-    if (e.nuevo) { if (!opNuevaCuenta) opNuevaCuenta = S.nuevoOpId(); r = await S.api('crearCuenta', { opId: opNuevaCuenta, nombre: nombre, tipo: tipo, saldoInicial: saldo }); }
+    if (e.nuevo) { if (!opNuevaCuenta) { opNuevaCuenta = S.nuevoOpId(); if (borrCta) borrCta.guardar(); } r = await S.api('crearCuenta', { opId: opNuevaCuenta, nombre: nombre, tipo: tipo, saldoInicial: saldo }); }
     else r = await S.api('editarCuenta', { codigo: e.codigo, nombre: nombre, tipo: tipo, saldoInicial: saldo, activo: document.getElementById('cuActivo').checked });
     enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar';
     if (!r || !r.success) { if (r && r.definitivo) opNuevaCuenta = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
-    opNuevaCuenta = null; ctaEdit = null;
+    opNuevaCuenta = null; ctaEdit = null; if (borrCta) { borrCta.borrar(); borrCta = null; }
     S.toast('✅ Guardado', 'verde');
     await cargarEstado(true);
     renderCuentas();
