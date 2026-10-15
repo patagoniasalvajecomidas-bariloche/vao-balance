@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SEBA BALANCE · Deudas</title>
+<link rel="icon" type="image/svg+xml" href="logo-se-isotipo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --oliva:#1E88E5; --oliva-dark:#0D47A1; --oliva-deep:#0A2472; --oliva-light:#E3F2FD; --naranja:#FF8C00; --naranja-dark:#E65100;
+        --verde:#2E7D32; --verde-light:#E8F5E9; --arena:#F5F7FA; --arena-dark:#E8ECF0; --blanco:#FFFFFF; --gris:#607080; --texto:#111827; --rojo:#D32F2F; --rojo-light:#FFEBEE; }
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { overflow-x:hidden; }
+body { font-family:'DM Sans',sans-serif; background:var(--blanco); color:var(--texto); min-height:100dvh; }
+button { font-family:inherit; }
+.header { background:linear-gradient(135deg,var(--oliva-deep),var(--oliva-dark),var(--oliva)); padding:12px 16px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 12px rgba(13,71,161,0.35); position:sticky; top:0; z-index:100; }
+.header img { height:34px; }
+.header-titulo { font-family:'Playfair Display',serif; color:white; font-size:1rem; font-weight:900; line-height:1.1; }
+.header-sub { color:rgba(255,255,255,0.7); font-size:0.65rem; letter-spacing:2px; text-transform:uppercase; }
+.btn-volver { background:rgba(255,255,255,0.15); border:none; color:white; border-radius:20px; padding:6px 12px; font-size:0.78rem; font-weight:700; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; }
+.tabs { display:flex; gap:6px; padding:12px 14px 0; }
+.tab { flex:1; padding:9px; border:2px solid var(--arena-dark); border-radius:50px; background:white; font-weight:700; font-size:0.85rem; color:var(--gris); cursor:pointer; }
+.tab.on { background:var(--oliva-dark); border-color:var(--oliva-dark); color:white; }
+.loading { text-align:center; padding:60px 20px; color:var(--gris); }
+.spinner { width:36px; height:36px; border:3px solid var(--oliva-light); border-top-color:var(--oliva); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 12px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.empty { text-align:center; padding:30px 20px; color:#aaa; font-size:0.9rem; }
+.seccion { padding:14px 14px 90px; }
+.resumen-global { background:linear-gradient(135deg,var(--oliva-deep),var(--oliva)); border-radius:16px; padding:14px 16px; margin-bottom:14px; color:white; display:flex; gap:10px; }
+.resumen-global > div { flex:1; min-width:0; }
+.res-label { font-size:0.68rem; opacity:.75; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+.res-total { font-family:'Playfair Display',serif; font-size:1.45rem; font-weight:900; line-height:1; white-space:nowrap; }
+.res-sub { font-size:0.75rem; opacity:.85; margin-top:4px; }
+.filtros { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.chip { padding:5px 12px; border:2px solid var(--arena-dark); border-radius:20px; background:white; font-size:0.75rem; font-weight:700; cursor:pointer; color:var(--gris); }
+.chip.activo { background:var(--oliva-dark); border-color:var(--oliva-dark); color:white; }
+.card { background:white; border:1px solid var(--arena-dark); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.card.vencido { border-left:4px solid var(--rojo); }
+.card.parcial { border-left:4px solid var(--naranja); }
+.card.ok { border-left:4px solid var(--verde); }
+.card .n { font-weight:700; font-size:0.9rem; }
+.card .d { font-size:0.72rem; color:var(--gris); margin-top:2px; }
+.card .m { font-weight:900; font-size:0.98rem; color:var(--oliva-dark); text-align:right; white-space:nowrap; }
+.badge { display:inline-block; font-size:0.62rem; font-weight:700; border-radius:8px; padding:1px 6px; margin-right:4px; text-transform:uppercase; }
+.b-debo { background:var(--rojo-light); color:var(--rojo); } .b-meDeben { background:var(--verde-light); color:var(--verde); }
+.b-gris { background:var(--arena); color:var(--gris); } .b-nar { background:#fff3e0; color:var(--naranja-dark); }
+.btn-primario { width:100%; padding:13px; border:none; border-radius:12px; background:var(--oliva-dark); color:white; font-weight:700; font-size:0.9rem; cursor:pointer; }
+.btn-primario:disabled { opacity:.6; }
+.btn-secundario { width:100%; padding:11px; border:1px solid var(--arena-dark); border-radius:12px; background:white; color:var(--gris); font-weight:700; font-size:0.85rem; cursor:pointer; margin-top:8px; }
+.btn-peligro { width:100%; padding:11px; border:none; border-radius:12px; background:var(--rojo-light); color:var(--rojo); font-weight:700; font-size:0.85rem; cursor:pointer; margin-top:8px; }
+.form-grupo { margin-bottom:12px; }
+.form-label { display:block; font-size:0.72rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.form-input { width:100%; padding:11px 12px; border:1.5px solid var(--arena-dark); border-radius:10px; font-size:16px; font-family:inherit; color:var(--texto); background:white; }
+.form-input:focus { outline:none; border-color:var(--oliva); }
+.metodos-pago { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.btn-metodo { flex:1; min-width:calc(50% - 4px); padding:10px 8px; border:2px solid var(--arena-dark); border-radius:12px; background:white; font-size:0.8rem; font-weight:700; cursor:pointer; color:var(--gris); }
+.btn-metodo.activo { border-color:var(--oliva); background:var(--oliva-light); color:var(--oliva-dark); }
+.btn-metodo:disabled { opacity:.5; }
+.ayuda { font-size:0.75rem; color:var(--gris); background:var(--arena); border-radius:10px; padding:8px 10px; margin-bottom:12px; line-height:1.4; }
+.modal-bg { position:fixed; inset:0; background:rgba(10,36,114,0.55); z-index:1000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+.modal-bg.open { opacity:1; pointer-events:auto; }
+.modal-sheet { background:white; border-radius:20px 20px 0 0; width:100%; max-width:480px; max-height:90dvh; overflow-y:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:8px; }
+.modal-titulo { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; }
+.modal-cerrar { background:var(--arena); border:none; width:30px; height:30px; border-radius:50%; font-size:1rem; cursor:pointer; color:var(--gris); flex-shrink:0; }
+.error-msg { color:var(--rojo); font-size:0.85rem; margin-bottom:10px; min-height:1em; }
+.pago-row { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--arena); font-size:0.85rem; }
+.btn-mini { border:1px solid var(--rojo); color:var(--rojo); background:white; border-radius:20px; padding:2px 10px; font-size:0.7rem; font-weight:700; cursor:pointer; }
+.pendiente-op { background:#fff3e0; border:1px solid #ffcc80; color:#8a4b00; border-radius:12px; padding:10px 12px; margin:12px 14px 0; font-size:0.82rem; display:none; }
+.pendiente-op button { margin-top:8px; margin-right:6px; padding:6px 12px; border-radius:20px; border:none; font-weight:700; cursor:pointer; }
+.mes-nav { display:flex; align-items:center; justify-content:space-between; background:white; border-radius:14px; padding:8px 12px; border:1px solid var(--arena-dark); margin-bottom:12px; }
+.mes-nombre { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--oliva-dark); }
+.btn-mes { width:32px; height:32px; border:none; border-radius:50%; background:var(--oliva-light); color:var(--oliva-dark); font-size:1.1rem; cursor:pointer; font-weight:900; }
+.check { display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.9rem; margin-bottom:10px; }
+.check input { width:22px; height:22px; flex-shrink:0; }
+.toast { position:fixed; top:70px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:8px 20px; border-radius:20px; font-size:0.85rem; font-weight:600; z-index:7000; opacity:0; transition:opacity .3s; pointer-events:none; max-width:calc(100vw - 32px); text-align:center; }
+.toast.visible { opacity:1; } .toast.verde { background:var(--verde); } .toast.rojo { background:var(--rojo); } .toast.naranja { background:var(--naranja); }
+</style>
+</head>
+<body>
+<div class="header">
+    <img src="logo-se-isotipo.svg" alt="" onerror="this.style.display='none'">
+    <div style="min-width:0;"><div class="header-titulo" id="headerTitulo">SEBA BALANCE</div><div class="header-sub" id="headerSub">Deudas</div></div>
+    <button class="btn-volver" style="margin-left:auto;" onclick="SEBA.reportar(pestana)" aria-label="Reportar problema">🐞</button>
+    <a href="#" class="btn-volver" id="btnVolver">← Volver</a>
+</div>
+<div class="tabs"><button class="tab on" id="tabD" onclick="irPestana('deudas')">🧾 Deudas</button><button class="tab" id="tabC" onclick="irPestana('compromisos')">⏰ Compromisos</button></div>
+<div class="pendiente-op" id="pendienteOp"></div>
+<div id="appContent"><div class="loading"><div class="spinner"></div><div>Cargando...</div></div></div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet"><div class="modal-header"><span class="modal-titulo" id="modalTitulo"></span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div><div id="modalCuerpo"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="seba-config.js"></script>
+<script src="seba-comun.js"></script>
+<script>
+window.APP_VERSION = 1;
+const S = window.SEBA, PREFIJO = S.prefijo;
+document.getElementById('btnVolver').href = 'balance.html?p=' + PREFIJO;
+document.getElementById('headerSub').textContent = 'Deudas · ' + PREFIJO;
+const K_OP = 'seba_op_deudas_' + PREFIJO;   // UNA operación enviada sin confirmar (pago, alta de deuda, pago de compromiso)
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let pestana = location.hash === '#compromisos' ? 'compromisos' : 'deudas';
+let estado = null, deudas = [], comp = null, periodo = S.hoy().slice(0, 7), filtroD = 'ABIERTAS', enviando = false;
+
+function sinSesion(msg) { document.getElementById('appContent').innerHTML = '<div class="loading" style="color:var(--rojo);">' + S.esc(msg) + '<br><br><a href="balance.html?p=' + PREFIJO + '" style="color:var(--oliva-dark);font-weight:700;">Entrar con PIN</a></div>'; }
+function chequearSesion(r) { if (r && r.sesion) { S.setToken(''); sinSesion('🔒 ' + r.error); return true; } return false; }
+const cuentasAct = () => (estado ? estado.cuentas : []).filter(c => c.activo !== false);
+const nombreCta = cod => { const c = (estado ? estado.cuentas : []).find(x => x.codigo === cod); return c ? c.nombre : cod; };
+
+async function cargar() {
+    if (!S.prefijoValido || !S.token()) { sinSesion('🔒 Sesión no encontrada. Volvé a entrar.'); return; }
+    const [e, d, c] = await Promise.all([S.api('getEstado', {}), S.api('getDeudas', {}), S.api('getCompromisos', { periodo })]);
+    if (!e || !d || !c) { document.getElementById('appContent').innerHTML = '<div class="loading" style="color:var(--rojo);">❌ Sin conexión.<br><br><button class="btn-secundario" style="max-width:200px" onclick="cargar()">🔄 Reintentar</button></div>'; return; }
+    if (chequearSesion(e) || chequearSesion(d) || chequearSesion(c)) return;
+    if (e.error || d.error || c.error) { sinSesion('❌ ' + (e.error || d.error || c.error)); return; }
+    estado = e; deudas = d.deudas; comp = c;
+    if (e.nombre) document.getElementById('headerTitulo').textContent = e.nombre;
+    render();
+}
+async function cargarComp() { const c = await S.api('getCompromisos', { periodo }); if (c && c.success) { comp = c; render(); } else S.toast(S.motivo(c, 'Probá de nuevo.'), 'rojo'); }
+function irPestana(p) { pestana = p; history.replaceState(null, '', p === 'compromisos' ? '#compromisos' : '#'); render(); }
+function render() {
+    document.getElementById('tabD').classList.toggle('on', pestana === 'deudas');
+    document.getElementById('tabC').classList.toggle('on', pestana === 'compromisos');
+    renderPendiente();
+    if (!estado) return;
+    pestana === 'deudas' ? renderDeudas() : renderCompromisos();
+}
+
+// ========== OPERACIÓN EN CURSO (igual criterio que la boleta del POS) ==========
+function opPendiente() { return S.ls.get(K_OP); }
+function renderPendiente() {
+    const op = opPendiente(), div = document.getElementById('pendienteOp');
+    if (!op) { div.style.display = 'none'; return; }
+    div.style.display = 'block';
+    div.innerHTML = '⚠️ <b>Enviado sin confirmar:</b> ' + S.esc(op.etiqueta) + '<br><button style="background:#ff9800;color:white" onclick="reintentarOp()">Reintentar</button><button style="background:white;color:#8a4b00" onclick="descartarOp()">Descartar</button>';
+}
+async function enviarOp(op) {
+    if (!S.ls.set(K_OP, op)) return { error: 'No se pudo guardar en este celular', definitivo: true };
+    renderPendiente();
+    enviando = true;
+    const r = await S.api(op.accion, op.datos);
+    enviando = false;
+    if (r && (r.success || r.definitivo)) S.ls.del(K_OP);
+    if (r && r.sesion) { S.setToken(''); }
+    renderPendiente();
+    return r;
+}
+async function reintentarOp() {
+    const op = opPendiente(); if (!op || enviando) return;
+    const r = await enviarOp(op);
+    if (r && r.success) { S.toast('✅ ' + (r.yaExistia ? 'Ya estaba registrado' : 'Registrado'), 'verde'); cerrarModal(); cargar(); }
+    else S.toast(S.motivo(r), 'rojo', 4000);
+}
+function descartarOp() {
+    const op = opPendiente(); if (!op) return;
+    if (!confirm('¿Descartar "' + op.etiqueta + '"?\n\nSi ya llegó al servidor, quedó registrado igual.')) return;
+    S.ls.del(K_OP); renderPendiente();
+}
+// Sin respuesta: el formulario queda fijo (mismo número de operación); el botón reintenta sin duplicar.
+function fijarForm() { document.querySelectorAll('#modalCuerpo input, #modalCuerpo select, #modalCuerpo .btn-metodo').forEach(e => e.disabled = true); }
+function hayPendiente(id) { const op = opPendiente(); if (op && id && op.id === id) return false; if (op) { S.toast('⚠️ Primero reintentá o descartá la operación pendiente', 'rojo', 3500); return true; } return false; }
+async function verificarPendiente() {
+    const op = opPendiente(); if (!op) return;
+    const r = await S.api('verificarOperacion', { id: op.id });
+    if (r && r.success && r.existe) { S.ls.del(K_OP); S.toast('✅ La operación pendiente SÍ se había registrado', 'verde', 4000); renderPendiente(); cargar(); }
+}
+
+// ========== MODAL ==========
+function abrirModal(titulo, html) {
+    document.getElementById('modalTitulo').textContent = titulo;
+    document.getElementById('modalCuerpo').innerHTML = html;
+    if (!document.getElementById('modal').classList.contains('open')) history.pushState({ seba: 'modal' }, '');
+    document.getElementById('modal').classList.add('open');
+}
+function cerrarModal(desdeAtras) {
+    const m = document.getElementById('modal'); if (!m.classList.contains('open')) return;
+    m.classList.remove('open');
+    if (!desdeAtras && history.state && history.state.seba === 'modal') history.back();
+}
+window.addEventListener('popstate', () => cerrarModal(true));
+function botonesCuenta(cont, sel, fn) {
+    return cuentasAct().map(c => '<button class="btn-metodo' + (c.codigo === sel ? ' activo' : '') + '" onclick="' + fn + '(\'' + c.codigo + '\')">' + S.esc(c.nombre) + '</button>').join('');
+}
+
+// ========== DEUDAS ==========
+function renderDeudas() {
+    const abiertas = deudas.filter(d => d.estado === 'PENDIENTE' || d.estado === 'PARCIAL');
+    const debo = S.suma(abiertas.filter(d => d.sentido === 'DEBO'), d => d.pendiente), meDeben = S.suma(abiertas.filter(d => d.sentido === 'ME_DEBEN'), d => d.pendiente);
+    const lista = deudas.filter(d => filtroD === 'ABIERTAS' ? (d.estado === 'PENDIENTE' || d.estado === 'PARCIAL') : filtroD === 'SALDADAS' ? d.estado === 'SALDADA' : d.estado === 'ANULADA')
+        .sort((a, b) => (b.vencida - a.vencida) || String(a.vence || '9999').localeCompare(String(b.vence || '9999')) || b.fecha.localeCompare(a.fecha));
+    document.getElementById('appContent').innerHTML = '<div class="seccion">' +
+        '<div class="resumen-global"><div><div class="res-label">Debo</div><div class="res-total">' + S.fmt(debo) + '</div><div class="res-sub">' + abiertas.filter(d => d.sentido === 'DEBO').length + ' abiertas</div></div>' +
+        '<div><div class="res-label">Me deben</div><div class="res-total">' + S.fmt(meDeben) + '</div><div class="res-sub">' + abiertas.filter(d => d.sentido === 'ME_DEBEN').length + ' abiertas</div></div></div>' +
+        '<button class="btn-primario" onclick="nuevaDeuda()" style="margin-bottom:12px;">＋ Nueva deuda</button>' +
+        '<div class="filtros">' + [['ABIERTAS', 'Abiertas'], ['SALDADAS', 'Saldadas'], ['ANULADAS', 'Anuladas']].map(([k, t]) => '<button class="chip' + (filtroD === k ? ' activo' : '') + '" onclick="filtroD=\'' + k + '\';render()">' + t + '</button>').join('') + '</div>' +
+        (lista.length ? lista.map(d => '<div class="card' + (d.vencida ? ' vencido' : d.estado === 'PARCIAL' ? ' parcial' : d.estado === 'SALDADA' ? ' ok' : '') + '" onclick="verDeuda(\'' + d.id + '\')"><div style="min-width:0;"><div class="n">' +
+            '<span class="badge ' + (d.sentido === 'DEBO' ? 'b-debo">Debo' : 'b-meDeben">Me debe') + '</span>' + S.esc(d.persona) + '</div><div class="d">' + S.esc(d.descripcion || '') + (d.descripcion ? ' · ' : '') + 'desde ' + S.fechaCorta(d.fecha) +
+            (d.vence ? ' · vence ' + S.fechaCorta(d.vence) : '') + (d.vencida ? ' · <b style="color:var(--rojo)">VENCIDA</b>' : '') + (d.estado === 'PARCIAL' ? ' · pagó ' + S.fmt(d.pagado) : '') + '</div></div>' +
+            '<div class="m">' + S.fmt(d.estado === 'SALDADA' || d.estado === 'ANULADA' ? d.importe : d.pendiente) + '</div></div>').join('') : '<div class="empty">' + (filtroD === 'ABIERTAS' ? 'No hay deudas abiertas 🎉' : 'Nada por acá') + '</div>') + '</div>';
+}
+let nd = {};
+function nuevaDeuda() {
+    if (hayPendiente()) return;
+    nd = { sentido: 'DEBO', mover: false, cuenta: (cuentasAct()[0] || {}).codigo || '', opId: S.nuevoOpId() };
+    abrirModal('＋ Nueva deuda', '<div class="metodos-pago"><button class="btn-metodo activo" id="ndDebo" onclick="ndSentido(\'DEBO\')">Yo debo</button><button class="btn-metodo" id="ndMe" onclick="ndSentido(\'ME_DEBEN\')">Me deben</button></div>' +
+        '<div class="form-grupo"><label class="form-label" id="ndPersonaLbl">¿A quién le debés?</label><input class="form-input" id="ndPersona" maxlength="60" placeholder="Nombre"></div>' +
+        '<div class="form-grupo"><label class="form-label">Importe</label><input class="form-input" id="ndImporte" inputmode="decimal" placeholder="0"></div>' +
+        '<div class="form-grupo"><label class="form-label">¿Por qué? (opcional)</label><input class="form-input" id="ndDesc" maxlength="120" placeholder="Ej: compra en el almacén"></div>' +
+        '<div style="display:flex;gap:8px;"><div class="form-grupo" style="flex:1"><label class="form-label">Fecha</label><input type="date" class="form-input" id="ndFecha" value="' + S.hoy() + '"></div>' +
+        '<div class="form-grupo" style="flex:1"><label class="form-label">Vence (opcional)</label><input type="date" class="form-input" id="ndVence"></div></div>' +
+        '<div class="form-grupo"><label class="form-label">Teléfono (opcional)</label><input class="form-input" id="ndTel" inputmode="tel" maxlength="30"></div>' +
+        '<label class="check"><input type="checkbox" id="ndMover" onchange="ndMover(this.checked)"> <span id="ndMoverTxt">Me prestaron plata (entra a una cuenta)</span></label>' +
+        '<div id="ndCuentas" style="display:none;"><div class="metodos-pago" id="ndCtaBtns"></div></div>' +
+        '<div class="ayuda" id="ndAyuda"></div><div class="error-msg" id="ndError"></div><button class="btn-primario" id="ndBtn" onclick="guardarDeuda()">Guardar deuda</button>');
+    ndAyuda();
+}
+function ndSentido(s) {
+    nd.sentido = s;
+    document.getElementById('ndDebo').classList.toggle('activo', s === 'DEBO'); document.getElementById('ndMe').classList.toggle('activo', s !== 'DEBO');
+    document.getElementById('ndPersonaLbl').textContent = s === 'DEBO' ? '¿A quién le debés?' : '¿Quién te debe?';
+    document.getElementById('ndMoverTxt').textContent = s === 'DEBO' ? 'Me prestaron plata (entra a una cuenta)' : 'Presté plata (sale de una cuenta)';
+    ndAyuda();
+}
+function ndMover(v) { nd.mover = v; document.getElementById('ndCuentas').style.display = v ? 'block' : 'none'; ndCta(nd.cuenta); ndAyuda(); }
+function ndCta(c) { nd.cuenta = c; document.getElementById('ndCtaBtns').innerHTML = botonesCuenta('', c, 'ndCta'); }
+function ndAyuda() {
+    const t = nd.sentido === 'DEBO'
+        ? (nd.mover ? 'Te prestaron dinero: entra a la cuenta elegida. Cuando lo devuelvas, registrás el pago y sale de la cuenta.' : 'Compraste algo fiado o quedaste debiendo: no cambia tus cuentas hasta que pagues.')
+        : (nd.mover ? 'Prestaste dinero: sale de la cuenta elegida. Cuando te lo devuelvan, registrás el cobro y entra.' : 'Alguien te debe (por ejemplo, vendiste fiado): no cambia tus cuentas hasta que te paguen.');
+    document.getElementById('ndAyuda').textContent = t + ' Una deuda no cuenta como gasto ni ingreso.';
+}
+async function guardarDeuda() {
+    if (enviando || hayPendiente(nd.opId)) return;
+    const err = document.getElementById('ndError'), persona = document.getElementById('ndPersona').value.trim(), imp = S.leerImporte(document.getElementById('ndImporte').value);
+    const fecha = document.getElementById('ndFecha').value, vence = document.getElementById('ndVence').value;
+    if (!persona) { err.textContent = 'Escribí el nombre'; return; }
+    if (!imp || isNaN(imp) || imp <= 0) { err.textContent = 'Escribí el importe'; return; }
+    if (!fecha) { err.textContent = 'Elegí la fecha'; return; }
+    if (vence && vence < fecha) { err.textContent = 'El vencimiento es anterior a la fecha'; return; }
+    if (nd.mover && !nd.cuenta) { err.textContent = 'Elegí la cuenta'; return; }
+    const datos = { opId: nd.opId, sentido: nd.sentido, persona, importe: imp, fecha, vence, telefono: document.getElementById('ndTel').value.trim(), descripcion: document.getElementById('ndDesc').value.trim(), moverDinero: nd.mover, cuenta: nd.mover ? nd.cuenta : '' };
+    const btn = document.getElementById('ndBtn'); btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
+    const r = await enviarOp({ accion: 'crearDeuda', datos, id: nd.opId, etiqueta: 'Deuda ' + (nd.sentido === 'DEBO' ? 'con ' : 'de ') + persona.toUpperCase() + ' ' + S.fmt(imp) });
+    btn.disabled = false; btn.textContent = 'Guardar deuda';
+    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrada' : '✅ Deuda registrada', 'verde'); filtroD = 'ABIERTAS'; cargar(); return; }
+    if (r && r.definitivo) { nd.opId = S.nuevoOpId(); err.textContent = '❌ ' + r.error; return; }
+    fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Guardar de nuevo (no se duplica).');
+}
+function verDeuda(id) {
+    const d = deudas.find(x => x.id === id); if (!d) return;
+    const abierta = d.estado === 'PENDIENTE' || d.estado === 'PARCIAL';
+    const wa = d.telefono ? 'https://wa.me/' + d.telefono.replace(/\D/g, '') + '?text=' + encodeURIComponent('Hola ' + d.persona + ', te escribo por ' + (d.descripcion || 'la deuda') + '. Saldo pendiente: ' + S.fmt(d.pendiente) + '.') : '';
+    abrirModal((d.sentido === 'DEBO' ? 'Le debo a ' : 'Me debe ') + d.persona,
+        '<div class="resumen-global" style="margin-bottom:12px;"><div><div class="res-label">Pendiente</div><div class="res-total">' + S.fmt(d.pendiente) + '</div><div class="res-sub">de ' + S.fmt(d.importe) + ' · ' + d.estado.toLowerCase() + '</div></div></div>' +
+        '<div class="ayuda">' + (d.descripcion ? S.esc(d.descripcion) + '<br>' : '') + 'Desde ' + S.esc(d.fecha.split('-').reverse().join('/')) + (d.vence ? ' · vence ' + S.esc(d.vence.split('-').reverse().join('/')) : '') + (d.telefono ? ' · 📞 ' + S.esc(d.telefono) : '') + (d.motivo ? '<br>Anulada: ' + S.esc(d.motivo) : '') + '</div>' +
+        (d.pagos.length ? '<div class="form-label">Pagos</div>' + d.pagos.map(p => '<div class="pago-row"><span>' + S.fechaCorta(p.fecha) + ' · ' + S.esc(nombreCta(p.cuenta)) + '</span><span><b>' + S.fmt(p.importe) + '</b> <button class="btn-mini" onclick="anularPago(\'' + p.movId + '\')">Anular</button></span></div>').join('') + '<div style="height:12px"></div>' : '') +
+        (abierta ? '<button class="btn-primario" onclick="pagarDeuda(\'' + d.id + '\')">' + (d.sentido === 'DEBO' ? '💸 Registrar pago' : '💵 Registrar cobro') + '</button>' : '') +
+        (wa && abierta ? '<a class="btn-secundario" style="display:block;text-align:center;text-decoration:none;" target="_blank" rel="noopener" href="' + wa + '">📲 Escribir por WhatsApp</a>' : '') +
+        (d.estado !== 'ANULADA' && !d.pagos.length ? '<button class="btn-peligro" onclick="anularDeuda(\'' + d.id + '\')">Anular deuda</button>' : ''));
+}
+let pg = {};
+function pagarDeuda(id) {
+    if (hayPendiente()) return;
+    const d = deudas.find(x => x.id === id); if (!d) return;
+    pg = { deudaId: id, cuenta: (cuentasAct()[0] || {}).codigo || '', movId: S.nuevoMovId(), d };
+    abrirModal(d.sentido === 'DEBO' ? 'Pago a ' + d.persona : 'Cobro de ' + d.persona,
+        '<div class="ayuda">Pendiente: <b>' + S.fmt(d.pendiente) + '</b>. Podés pagar una parte.</div>' +
+        '<div class="form-grupo"><label class="form-label">Importe</label><input class="form-input" id="pgImporte" inputmode="decimal" value="' + String(d.pendiente).replace('.', ',') + '"></div>' +
+        '<div class="form-label">' + (d.sentido === 'DEBO' ? '¿De qué cuenta sale?' : '¿A qué cuenta entra?') + '</div><div class="metodos-pago" id="pgCtas"></div>' +
+        '<div class="form-grupo"><label class="form-label">Fecha</label><input type="date" class="form-input" id="pgFecha" value="' + S.hoy() + '"></div>' +
+        '<div class="error-msg" id="pgError"></div><button class="btn-primario" id="pgBtn" onclick="confirmarPago()">Confirmar</button>');
+    pgCta(pg.cuenta);
+}
+function pgCta(c) { pg.cuenta = c; document.getElementById('pgCtas').innerHTML = botonesCuenta('', c, 'pgCta'); }
+async function confirmarPago() {
+    if (enviando || hayPendiente(pg.movId)) return;
+    const err = document.getElementById('pgError'), imp = S.leerImporte(document.getElementById('pgImporte').value), fecha = document.getElementById('pgFecha').value;
+    if (!imp || isNaN(imp) || imp <= 0) { err.textContent = 'Escribí el importe'; return; }
+    if (Math.round(imp * 100) > Math.round(pg.d.pendiente * 100)) { err.textContent = 'Es más que lo pendiente (' + S.fmt(pg.d.pendiente) + ')'; return; }
+    if (!pg.cuenta) { err.textContent = 'Elegí la cuenta'; return; }
+    const btn = document.getElementById('pgBtn'); btn.disabled = true; btn.textContent = '⏳ Registrando...'; err.textContent = '';
+    const r = await enviarOp({ accion: 'pagarDeuda', datos: { movId: pg.movId, deudaId: pg.deudaId, importe: imp, cuenta: pg.cuenta, fecha }, id: pg.movId, etiqueta: (pg.d.sentido === 'DEBO' ? 'Pago a ' : 'Cobro de ') + pg.d.persona + ' ' + S.fmt(imp) });
+    btn.disabled = false; btn.textContent = 'Confirmar';
+    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Registrado · queda ' + S.fmt(r.pendiente || 0), 'verde', 3500); cargar(); return; }
+    if (r && r.definitivo) { pg.movId = S.nuevoMovId(); err.textContent = '❌ ' + r.error; return; }
+    fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Confirmar de nuevo (no se duplica).');
+}
+async function anularPago(movId) {
+    const m = prompt('¿Por qué anulás este pago? (queda registrado)'); if (m === null) return;
+    if (m.trim().length < 3) { S.toast('Escribí el motivo', 'rojo'); return; }
+    const r = await S.api('anularMovimiento', { movId, motivo: m.trim() });
+    if (r && r.success) { cerrarModal(); S.toast('✅ Pago anulado', 'verde'); cargar(); } else S.toast(S.motivo(r, 'No se confirmó: reintentá (no se duplica).'), 'rojo', 4000);
+}
+async function anularDeuda(id) {
+    const m = prompt('¿Por qué anulás la deuda? (queda registrado)'); if (m === null) return;
+    if (m.trim().length < 3) { S.toast('Escribí el motivo', 'rojo'); return; }
+    const r = await S.api('anularDeuda', { deudaId: id, motivo: m.trim() });
+    if (r && r.success) { cerrarModal(); S.toast('✅ Deuda anulada', 'verde'); cargar(); } else S.toast(S.motivo(r, 'No se confirmó: reintentá (no se duplica).'), 'rojo', 4000);
+}
+
+// ========== COMPROMISOS ==========
+function cambiarPeriodo(d) { let [a, m] = periodo.split('-').map(Number); m += d; if (m < 1) { m = 12; a--; } if (m > 12) { m = 1; a++; } periodo = a + '-' + String(m).padStart(2, '0'); cargarComp(); }
+function renderCompromisos() {
+    const lista = comp ? comp.compromisos : [], hoy = S.hoy();
+    const pend = lista.filter(c => c.estado !== 'PAGADO');
+    const [a, m] = periodo.split('-').map(Number);
+    document.getElementById('appContent').innerHTML = '<div class="seccion">' +
+        '<div class="mes-nav"><button class="btn-mes" onclick="cambiarPeriodo(-1)">‹</button><span class="mes-nombre">' + MESES[m - 1] + ' ' + a + '</span><button class="btn-mes" onclick="cambiarPeriodo(1)">›</button></div>' +
+        '<div class="resumen-global"><div><div class="res-label">Pendientes</div><div class="res-total">' + pend.length + ' de ' + lista.length + '</div><div class="res-sub">Estimado pendiente ' + S.fmt(S.suma(pend, c => Math.max((c.estimado || 0) - c.pagado, 0))) + '</div></div></div>' +
+        '<div class="ayuda">Los compromisos (alquiler, luz, cuotas...) <b>no se descuentan solos</b>: cuando pagás, tocás el compromiso y queda registrado como gasto.</div>' +
+        '<button class="btn-primario" onclick="formCompromiso()" style="margin-bottom:12px;">＋ Nuevo compromiso</button>' +
+        (lista.length ? lista.map(c => {
+            const venc = c.estado !== 'PAGADO' && c.vence < hoy;
+            return '<div class="card' + (venc ? ' vencido' : c.estado === 'PARCIAL' ? ' parcial' : c.estado === 'PAGADO' ? ' ok' : '') + '" onclick="verCompromiso(\'' + c.id + '\')"><div style="min-width:0;"><div class="n">' + S.esc(c.nombre) + '</div><div class="d">' +
+                '<span class="badge ' + (c.estado === 'PAGADO' ? 'b-meDeben' : c.estado === 'PARCIAL' ? 'b-nar' : venc ? 'b-debo' : 'b-gris') + '">' + (venc ? 'vencido' : c.estado.toLowerCase()) + '</span>vence ' + S.fechaCorta(c.vence) + ' · ' + S.esc(c.concepto) + '</div></div>' +
+                '<div class="m">' + (c.pagado ? S.fmt(c.pagado) + (c.estimado ? '<div style="font-size:0.7rem;color:var(--gris);font-weight:500;">de ' + S.fmt(c.estimado) + '</div>' : '') : (c.estimado ? S.fmt(c.estimado) : '—')) + '</div></div>';
+        }).join('') : '<div class="empty">Sin compromisos. Agregá los pagos fijos de cada mes.</div>') +
+        (comp && comp.todos.some(t => !t.activo) ? '<div class="form-label" style="margin-top:16px;">Desactivados</div>' + comp.todos.filter(t => !t.activo).map(t => '<div class="card" style="opacity:.6" onclick="formCompromiso(\'' + t.id + '\')"><div class="n">' + S.esc(t.nombre) + '</div><div class="m">›</div></div>').join('') : '') +
+        '</div>';
+}
+function verCompromiso(id) {
+    const c = comp.compromisos.find(x => x.id === id); if (!c) return;
+    const falta = c.estimado ? Math.max(Math.round((c.estimado - c.pagado) * 100) / 100, 0) : 0;
+    abrirModal(c.nombre, '<div class="ayuda">' + S.esc(c.concepto) + ' · vence ' + S.esc(c.vence.split('-').reverse().join('/')) + (c.estimado ? ' · estimado ' + S.fmt(c.estimado) : '') + '<br>Pagado este mes: <b>' + S.fmt(c.pagado) + '</b></div>' +
+        (c.conceptoActivo ? '' : '<div class="error-msg">El concepto de este compromiso está oculto en el catálogo: activalo para poder pagarlo.</div>') +
+        '<div class="form-grupo"><label class="form-label">Importe a pagar</label><input class="form-input" id="cpImporte" inputmode="decimal" value="' + (falta ? String(falta).replace('.', ',') : '') + '"></div>' +
+        '<div class="form-label">¿De qué cuenta sale?</div><div class="metodos-pago" id="cpCtas"></div>' +
+        '<div class="form-grupo"><label class="form-label">Fecha</label><input type="date" class="form-input" id="cpFecha" value="' + S.hoy() + '"></div>' +
+        '<div class="error-msg" id="cpError"></div><button class="btn-primario" id="cpBtn" onclick="pagarCompromiso(\'' + c.id + '\')"' + (c.conceptoActivo ? '' : ' disabled') + '>💸 Registrar pago</button>' +
+        '<button class="btn-secundario" onclick="formCompromiso(\'' + c.id + '\')">✎ Editar compromiso</button>');
+    cp = { cuenta: cuentasAct().some(x => x.codigo === c.cuentaSugerida) ? c.cuentaSugerida : (cuentasAct()[0] || {}).codigo || '', movId: S.nuevoMovId() };
+    cpCta(cp.cuenta);
+}
+let cp = {};
+function cpCta(c) { cp.cuenta = c; document.getElementById('cpCtas').innerHTML = botonesCuenta('', c, 'cpCta'); }
+async function pagarCompromiso(id) {
+    if (enviando || hayPendiente(cp.movId)) return;
+    const c = comp.compromisos.find(x => x.id === id), err = document.getElementById('cpError');
+    const imp = S.leerImporte(document.getElementById('cpImporte').value), fecha = document.getElementById('cpFecha').value;
+    if (!imp || isNaN(imp) || imp <= 0) { err.textContent = 'Escribí el importe'; return; }
+    if (!cp.cuenta) { err.textContent = 'Elegí la cuenta'; return; }
+    if (!fecha) { err.textContent = 'Elegí la fecha'; return; }
+    const btn = document.getElementById('cpBtn'); btn.disabled = true; btn.textContent = '⏳ Registrando...'; err.textContent = '';
+    const datos = { movId: cp.movId, tipo: 'GASTO', fecha, cuenta: cp.cuenta, compromisoId: c.id, periodo: c.periodo, items: [{ codigo: c.codigo, importe: imp, descripcion: c.nombre + ' ' + c.periodo }] };
+    const r = await enviarOp({ accion: 'registrarBoleta', datos, id: cp.movId, etiqueta: 'Pago de ' + c.nombre + ' ' + S.fmt(imp) });
+    btn.disabled = false; btn.textContent = '💸 Registrar pago';
+    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba registrado' : '✅ Pago registrado como gasto', 'verde'); cargar(); return; }
+    if (r && r.definitivo) { cp.movId = S.nuevoMovId(); err.textContent = '❌ ' + r.error; return; }
+    fijarForm(); err.textContent = S.motivo(r, 'Quedó pendiente: tocá Registrar de nuevo (no se duplica).');
+}
+let fc = {};
+function formCompromiso(id) {
+    const t = id ? comp.todos.find(x => x.id === id) : null;
+    fc = { id: id || '', opId: id ? '' : S.nuevoOpId(), cuenta: t ? t.cuentaSugerida : '' };
+    const gastos = ((estado && estado.catalogoCompleto) || []).filter(p => p.tipo === 'GASTO' && (p.activo || (t && p.codigo === t.codigo)));
+    const cats = {}; gastos.forEach(p => (cats[p.category] = cats[p.category] || []).push(p));
+    abrirModal(t ? '✎ ' + t.nombre : '＋ Nuevo compromiso',
+        '<div class="form-grupo"><label class="form-label">Nombre</label><input class="form-input" id="fcNombre" maxlength="40" style="text-transform:uppercase" value="' + S.esc(t ? t.nombre : '') + '" placeholder="Ej: ALQUILER"></div>' +
+        '<div class="form-grupo"><label class="form-label">Se registra como</label><select class="form-input" id="fcCodigo"><option value="">Elegí un gasto...</option>' + Object.keys(cats).map(k => '<optgroup label="' + S.esc(k) + '">' + cats[k].map(p => '<option value="' + p.codigo + '"' + (t && t.codigo === p.codigo ? ' selected' : '') + '>' + S.esc(p.name) + '</option>').join('') + '</optgroup>').join('') + '</select></div>' +
+        '<div style="display:flex;gap:8px;"><div class="form-grupo" style="flex:1"><label class="form-label">Importe estimado</label><input class="form-input" id="fcEst" inputmode="decimal" value="' + (t && t.estimado ? String(t.estimado).replace('.', ',') : '') + '" placeholder="Opcional"></div>' +
+        '<div class="form-grupo" style="flex:1"><label class="form-label">Vence el día</label><input class="form-input" id="fcDia" inputmode="numeric" maxlength="2" value="' + (t ? t.diaVence : '10') + '"></div></div>' +
+        '<div class="form-label">Cuenta habitual (opcional)</div><div class="metodos-pago" id="fcCtas"></div>' +
+        (t ? '<label class="check"><input type="checkbox" id="fcActivo"' + (t.activo ? ' checked' : '') + '> Activo</label>' : '') +
+        '<div class="error-msg" id="fcError"></div><button class="btn-primario" id="fcBtn" onclick="guardarCompromiso()">Guardar</button>');
+    document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta');
+}
+function fcCta(c) { fc.cuenta = fc.cuenta === c && c ? '' : c; document.getElementById('fcCtas').innerHTML = botonesCuenta('', fc.cuenta, 'fcCta'); }
+async function guardarCompromiso() {
+    if (enviando) return;
+    const err = document.getElementById('fcError'), nombre = document.getElementById('fcNombre').value.trim(), codigo = document.getElementById('fcCodigo').value;
+    const et = document.getElementById('fcEst').value.trim(), est = et ? S.leerImporte(et) : '', dia = Number(document.getElementById('fcDia').value);
+    if (!nombre) { err.textContent = 'Escribí el nombre'; return; }
+    if (!codigo) { err.textContent = 'Elegí cómo se registra'; return; }
+    if (et && (isNaN(est) || !(est > 0))) { err.textContent = 'Importe inválido'; return; }
+    if (!(dia >= 1 && dia <= 31 && Math.floor(dia) === dia)) { err.textContent = 'Día de vencimiento: 1 a 31'; return; }
+    const btn = document.getElementById('fcBtn'); btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
+    enviando = true;
+    const datos = { nombre, codigo, estimado: est, diaVence: dia, cuentaSugerida: fc.cuenta || '' };
+    const r = fc.id ? await S.api('editarCompromiso', Object.assign(datos, { id: fc.id, activo: document.getElementById('fcActivo').checked })) : await S.api('crearCompromiso', Object.assign(datos, { opId: fc.opId }));
+    enviando = false; btn.disabled = false; btn.textContent = 'Guardar';
+    if (r && r.success) { cerrarModal(); S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde'); cargarComp(); return; }
+    if (r && r.definitivo && !fc.id) fc.opId = S.nuevoOpId();
+    err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).');
+}
+
+render();
+cargar().then(verificarPendiente);
+</script>
+</body>
+</html>

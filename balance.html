@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SEBA BALANCE</title>
+<link rel="icon" type="image/svg+xml" href="logo-se-isotipo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ===== VARIABLES (mismas que VAO POS) ===== */
+:root {
+    --lavanda:#1E88E5; --lavanda-dark:#0D47A1; --lavanda-light:#E3F2FD; --lavanda-pale:#F3F8FE;
+    --naranja:#f07d3a; --naranja-dark:#d4622a; --arena:#f5e6c8; --arena-dark:#e8d4a8;
+    --blanco:#fdf9f4; --gris:#6b6572; --texto:#3d3244; --rojo:#d64242; --verde:#5a9e6f;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { overflow-x:hidden; }
+body { font-family:'DM Sans',sans-serif; background:var(--blanco); color:var(--texto); height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+button { font-family:inherit; }
+
+/* ===== HEADER ===== */
+.header { background:linear-gradient(135deg,#0A2472 0%,#0D47A1 40%,#1E88E5 100%); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; box-shadow:0 2px 12px rgba(13,71,161,0.35); gap:8px; }
+.header-logo { display:flex; align-items:center; gap:10px; min-width:0; }
+.header-titulo { font-family:'Playfair Display',serif; color:white; font-size:1.05rem; font-weight:900; letter-spacing:0.5px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52vw; }
+.header-sub { color:rgba(255,255,255,0.7); font-size:0.62rem; font-weight:300; letter-spacing:2px; text-transform:uppercase; }
+.header-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.btn-head { background:rgba(255,255,255,0.15); border:none; color:white; border-radius:20px; padding:5px 10px; font-size:0.78rem; font-weight:700; cursor:pointer; }
+.indicador-carga { width:9px; height:9px; border-radius:50%; background:#ff5252; flex-shrink:0; transition:background .5s; }
+.indicador-carga.ok { background:#69f0ae; animation:pulsoVerde 2s infinite; }
+.indicador-carga.cargando { background:#ffb300; animation:parpadeo .8s infinite; }
+@keyframes pulsoVerde { 0%{box-shadow:0 0 0 0 rgba(105,240,174,.6)} 70%{box-shadow:0 0 0 5px rgba(105,240,174,0)} 100%{box-shadow:0 0 0 0 rgba(105,240,174,0)} }
+@keyframes parpadeo { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ===== TOOLBAR ===== */
+.toolbar { background:#0A2472; padding:7px 8px; display:flex; gap:5px; flex-shrink:0; }
+.btn-tool { flex:1; min-width:0; padding:5px 1px; border:none; border-radius:14px; font-size:0.62rem; font-weight:700; cursor:pointer; color:white; white-space:nowrap; overflow:hidden; background:rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; gap:1px; line-height:1.1; }
+.btn-tool i { font-style:normal; font-size:0.95rem; }
+.btn-tool.ingreso { background:rgba(240,125,58,0.75); }
+.btn-tool.hoy { background:rgba(90,158,111,0.75); }
+.btn-tool.stats { background:rgba(90,158,111,0.9); }
+.btn-tool.cerrar { background:rgba(214,66,66,0.6); }
+
+/* ===== FRANJA SALDOS ===== */
+.franja { background:white; padding:8px 12px 6px; border-bottom:1px solid #ede8f5; flex-shrink:0; }
+.franja-top { display:flex; align-items:center; gap:8px; }
+.modo { display:flex; background:var(--lavanda-light); border-radius:50px; padding:3px; flex-shrink:0; }
+.modo button { border:none; background:transparent; padding:6px 12px; border-radius:50px; font-size:0.74rem; font-weight:900; color:var(--lavanda-dark); cursor:pointer; letter-spacing:.5px; }
+.modo button.on.g { background:var(--rojo); color:white; }
+.modo button.on.i { background:var(--verde); color:white; }
+.saldo-total { margin-left:auto; text-align:right; cursor:pointer; min-width:0; }
+.saldo-total .l { font-size:0.6rem; color:var(--gris); text-transform:uppercase; letter-spacing:1px; }
+.saldo-total .v { font-weight:900; color:var(--lavanda-dark); font-size:1.02rem; white-space:nowrap; }
+.chips { display:flex; gap:6px; overflow-x:auto; padding:7px 0 2px; scrollbar-width:none; }
+.chips::-webkit-scrollbar { display:none; }
+.chip-cta { flex-shrink:0; border:1px solid var(--lavanda-light); background:var(--lavanda-pale); border-radius:12px; padding:4px 10px; font-size:0.72rem; color:var(--gris); cursor:pointer; white-space:nowrap; }
+.chip-cta b { color:var(--texto); }
+.chip-cta.neg b { color:var(--rojo); }
+.aviso-comp { margin-top:5px; font-size:0.74rem; font-weight:700; color:#b35a00; background:#fff3e0; border-radius:10px; padding:5px 10px; cursor:pointer; display:none; }
+
+/* ===== BUSCADOR ===== */
+.buscador-wrap { background:white; padding:8px 12px; border-bottom:1px solid #ede8f5; flex-shrink:0; position:relative; display:flex; gap:8px; align-items:center; }
+.buscador-input { width:100%; padding:10px 16px; border:2px solid var(--naranja); border-radius:50px; font-size:16px; color:var(--texto); outline:none; background:#fff8f3; box-shadow:0 2px 8px rgba(240,125,58,.15); text-transform:uppercase; font-family:inherit; }
+.buscador-input::placeholder { text-transform:none; }
+.buscador-resultados { position:absolute; top:100%; left:0; right:0; background:white; z-index:500; border-bottom:2px solid var(--lavanda-light); max-height:55vh; overflow-y:auto; box-shadow:0 8px 16px rgba(0,0,0,.08); }
+.resultado-item { padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; cursor:pointer; border-left:3px solid var(--verde); }
+.resultado-item:active { background:var(--lavanda-light); }
+.btn-cuadro { width:42px; height:42px; border:2px solid var(--lavanda-light); border-radius:12px; background:white; cursor:pointer; font-size:1.05rem; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+#listaTodosWrap { display:none; background:white; border-bottom:1px solid var(--lavanda-light); max-height:50vh; overflow-y:auto; flex-shrink:0; }
+.lt-cat { padding:6px 14px 3px; font-size:0.65rem; font-weight:700; color:var(--lavanda); text-transform:uppercase; letter-spacing:1px; background:var(--lavanda-pale); position:sticky; top:0; }
+.lt-item { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f0ecf7; cursor:pointer; gap:10px; }
+.lt-item:active { background:var(--lavanda-light); }
+
+/* ===== BOLETA (venta actual del POS) ===== */
+.venta-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:5.75rem; position:relative; }
+.venta-header { padding:8px 14px; display:flex; align-items:center; justify-content:space-between; background:var(--arena); border-bottom:1px solid var(--arena-dark); flex-shrink:0; gap:8px; }
+.venta-titulo { font-size:0.72rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:1.5px; }
+.venta-titulo .pend { color:var(--rojo); letter-spacing:0; text-transform:none; }
+.btn-limpiar { background:none; border:1px solid var(--rojo); color:var(--rojo); border-radius:20px; padding:3px 12px; font-size:0.72rem; font-weight:700; cursor:pointer; flex-shrink:0; }
+#listaVenta { flex:1; min-height:0; overflow-y:auto; }
+.item-venta { display:flex; align-items:center; padding:9px 12px 9px 14px; border-bottom:1px solid #f5f0ff; gap:8px; }
+.item-info { flex:1; min-width:0; }
+.item-nombre { font-weight:700; font-size:0.88rem; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-cat { font-size:0.66rem; color:var(--gris); text-transform:uppercase; letter-spacing:.5px; }
+.item-desc { font-size:0.78rem; color:var(--lavanda-dark); cursor:pointer; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-desc.vacia { color:#b0a8b8; }
+.item-precio { font-weight:900; color:var(--lavanda-dark); font-size:0.95rem; text-decoration:underline dotted; cursor:pointer; min-width:74px; text-align:right; flex-shrink:0; }
+.item-precio.falta { color:var(--rojo); }
+.btn-quitar { width:28px; height:28px; border:none; border-radius:50%; background:#fdecec; color:var(--rojo); font-weight:900; cursor:pointer; flex-shrink:0; }
+.vacio-txt { text-align:center; padding:16px 20px 6px; color:#aaa; font-size:0.85rem; }
+.tarjetas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:8px 12px 14px; }
+.tarjeta { background:white; border:1px solid #ede8f5; border-left:4px solid var(--lavanda); border-radius:14px; padding:10px 12px; cursor:pointer; min-width:0; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.tarjeta:active { background:var(--lavanda-light); }
+.tarjeta.i { border-left-color:var(--verde); }
+.tarjeta .n { font-weight:700; font-size:0.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tarjeta .c { font-size:0.62rem; color:var(--gris); text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tarjeta .p { font-size:0.78rem; font-weight:700; color:var(--lavanda-dark); margin-top:2px; }
+
+/* ===== TOTAL ===== */
+.total-bar { background:linear-gradient(135deg,#0A2472,var(--lavanda)); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:10px; }
+.total-label { color:rgba(255,255,255,.8); font-size:0.74rem; font-weight:500; text-transform:uppercase; letter-spacing:1px; }
+.total-monto { color:white; font-size:1.7rem; font-weight:900; font-family:'Playfair Display',serif; white-space:nowrap; }
+.btn-cobrar { background:linear-gradient(135deg,var(--naranja),var(--naranja-dark)); color:white; border:none; border-radius:50px; padding:12px 20px; font-size:1rem; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(240,125,58,.4); white-space:nowrap; }
+
+/* ===== TOAST ===== */
+.toast { position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#333; color:white; padding:8px 20px; border-radius:20px; font-size:0.88rem; font-weight:600; z-index:7000; opacity:0; transition:opacity .3s; max-width:calc(100vw - 32px); text-align:center; pointer-events:none; }
+.toast.visible { opacity:1; } .toast.verde { background:var(--verde); } .toast.rojo { background:var(--rojo); } .toast.naranja { background:var(--naranja); }
+
+/* ===== MODALES (bottom sheet como el POS) ===== */
+.modal-bg { position:fixed; inset:0; background:rgba(61,50,68,.75); z-index:1000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .25s; }
+.modal-bg.open { opacity:1; pointer-events:all; }
+.modal-sheet { background:white; border-radius:24px 24px 0 0; width:100%; max-width:480px; max-height:92dvh; padding-bottom:env(safe-area-inset-bottom); display:flex; flex-direction:column; }
+.modal-handle { width:36px; height:4px; background:#ddd; border-radius:2px; margin:10px auto 4px; flex-shrink:0; }
+.modal-header { padding:6px 16px 10px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0ebf8; flex-shrink:0; gap:8px; }
+.modal-titulo { font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--lavanda-dark); }
+.modal-cerrar { background:var(--lavanda-light); border:none; border-radius:50%; width:30px; height:30px; font-size:1rem; cursor:pointer; color:var(--lavanda-dark); flex-shrink:0; }
+.modal-body { overflow-y:auto; flex:1; min-height:0; }
+.confirm-items { padding:10px 20px; }
+.confirm-item { display:flex; justify-content:space-between; gap:10px; padding:6px 0; font-size:0.86rem; border-bottom:1px solid #f5f0ff; }
+.confirm-item small { display:block; color:var(--gris); font-size:0.74rem; }
+.confirm-total { padding:8px 20px; text-align:center; font-size:2rem; font-weight:900; font-family:'Playfair Display',serif; color:var(--lavanda-dark); }
+.sub-titulo { padding:4px 20px 6px; font-size:0.72rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:1px; }
+.metodos-pago { display:flex; gap:8px; padding:0 20px 12px; flex-wrap:wrap; }
+.btn-metodo { flex:1; min-width:calc(50% - 4px); padding:9px 8px; border:2px solid var(--lavanda-light); border-radius:14px; background:white; font-size:0.82rem; font-weight:700; cursor:pointer; color:var(--gris); text-align:center; }
+.btn-metodo small { display:block; font-weight:500; font-size:0.7rem; }
+.btn-metodo.activo { border-color:var(--lavanda); background:var(--lavanda-light); color:var(--lavanda-dark); }
+.btn-metodo:disabled { opacity:.5; }
+.fecha-fila { display:flex; gap:8px; padding:0 20px 12px; align-items:center; }
+.fecha-fila .form-input { flex:1; }
+.chip-fecha { padding:8px 12px; border:2px solid var(--lavanda-light); border-radius:12px; background:white; font-weight:700; font-size:0.78rem; color:var(--gris); cursor:pointer; }
+.aviso-curso { margin:0 20px 10px; padding:8px 12px; border-radius:10px; background:#fff3e0; color:#b35a00; font-size:0.8rem; font-weight:700; display:none; }
+.confirm-acciones { display:flex; gap:10px; padding:10px 20px 14px; flex-shrink:0; border-top:1px solid #f5f0ff; }
+.btn-cancelar-confirm { flex:1; padding:13px; border:2px solid var(--lavanda-light); border-radius:50px; background:white; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--gris); }
+.btn-ok-confirm { flex:2; padding:13px; border:none; border-radius:50px; background:linear-gradient(135deg,var(--naranja),var(--naranja-dark)); color:white; font-size:0.95rem; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(240,125,58,.4); }
+.btn-ok-confirm:disabled { opacity:.6; }
+.form-scroll { padding:14px 20px 4px; }
+.form-grupo { margin-bottom:12px; }
+.form-label { display:block; font-size:0.74rem; font-weight:700; color:var(--gris); margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px; }
+.form-input { width:100%; padding:10px 14px; border:2px solid var(--lavanda-light); border-radius:12px; font-size:16px; color:var(--texto); outline:none; background:var(--blanco); font-family:inherit; }
+.form-input:focus { border-color:var(--lavanda); }
+.btn-guardar { width:100%; padding:13px; border:none; border-radius:50px; background:linear-gradient(135deg,var(--lavanda),var(--lavanda-dark)); color:white; font-size:0.95rem; font-weight:900; cursor:pointer; margin-bottom:10px; }
+.btn-guardar:disabled { opacity:.6; }
+.btn-sec { width:100%; padding:11px; border:2px solid var(--lavanda-light); border-radius:50px; background:white; color:var(--lavanda-dark); font-size:0.9rem; font-weight:700; cursor:pointer; margin-bottom:10px; }
+.form-error { color:var(--rojo); font-size:0.85rem; margin-bottom:10px; min-height:1em; }
+.tabs { display:flex; gap:6px; padding:10px 16px 6px; flex-shrink:0; }
+.tab { flex:1; padding:8px; border:2px solid var(--lavanda-light); border-radius:50px; background:white; font-weight:700; font-size:0.8rem; color:var(--gris); cursor:pointer; }
+.tab.on { background:var(--lavanda-dark); border-color:var(--lavanda-dark); color:white; }
+.fila { padding:10px 18px; display:flex; justify-content:space-between; align-items:center; gap:10px; border-bottom:1px solid #f3eef9; cursor:pointer; }
+.fila:active { background:var(--lavanda-pale); }
+.fila .n { font-weight:700; font-size:0.88rem; }
+.fila .d { font-size:0.72rem; color:var(--gris); }
+.fila.off { opacity:.5; }
+.badge { font-size:0.66rem; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--lavanda-light); color:var(--lavanda-dark); white-space:nowrap; }
+.badge.r { background:#fdecec; color:var(--rojo); } .badge.v { background:#e8f5e9; color:#2e7d32; }
+.resumen-card { margin:12px 14px; background:linear-gradient(135deg,var(--lavanda-light),var(--arena)); border-radius:16px; padding:14px 16px; }
+.resumen-stat { display:flex; justify-content:space-between; padding:3px 0; font-size:0.9rem; }
+.venta-detalle { margin:8px 14px; background:white; border-radius:14px; padding:10px 14px; border:1px solid #ede8f5; }
+.venta-detalle.anulado { opacity:.55; text-decoration:line-through; }
+.venta-hora { font-size:0.76rem; color:var(--gris); margin-bottom:3px; }
+.venta-monto { font-weight:900; float:right; }
+.venta-items-text { font-size:0.8rem; line-height:1.45; }
+.vacio { text-align:center; color:#aaa; padding:30px 20px; font-size:0.9rem; }
+.check { display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.9rem; margin-bottom:12px; }
+.check input { width:22px; height:22px; }
+#overlayPin { position:fixed; inset:0; z-index:5000; background:linear-gradient(135deg,#0A2472,#1E88E5); display:flex; align-items:center; justify-content:center; padding:24px; }
+</style>
+</head>
+<body>
+
+<!-- OVERLAY PIN (igual que VAO POS) -->
+<div id="overlayPin">
+    <div style="width:100%;max-width:320px;text-align:center;color:white;">
+        <img src="logo-se-isotipo.svg" alt="" style="height:56px;margin-bottom:6px;" onerror="this.style.display='none'">
+        <div id="overlayPinTitulo" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;margin-bottom:4px;">Verificando sesión...</div>
+        <div id="overlayPinSub" style="font-size:0.8rem;opacity:0.75;margin-bottom:24px;">SEBA BALANCE</div>
+        <div id="overlayPinForm" style="display:none;">
+            <input type="password" id="overlayPinInput" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="PIN de 6 dígitos" autocomplete="off"
+                   onkeydown="if(event.key==='Enter')intentarLoginPin()"
+                   style="width:100%;padding:16px;border:none;border-radius:12px;font-size:1.4rem;text-align:center;letter-spacing:0.4em;outline:none;margin-bottom:14px;font-family:'DM Sans',sans-serif;">
+            <div id="overlayPinError" style="color:#ffcdd2;font-size:0.85rem;min-height:18px;margin-bottom:10px;"></div>
+            <button id="overlayPinBtn" onclick="intentarLoginPin()" style="width:100%;padding:14px;border:none;border-radius:50px;background:linear-gradient(135deg,var(--naranja),var(--naranja-dark));color:white;font-size:1rem;font-weight:900;cursor:pointer;">Ingresar</button>
+            <button type="button" onclick="irAlInicio()" style="width:100%;padding:12px;border:none;background:transparent;color:rgba(255,255,255,0.75);font-size:0.9rem;font-weight:600;cursor:pointer;margin-top:6px;">← Atrás</button>
+        </div>
+        <div id="overlayPinRed" style="display:none;">
+            <div style="font-size:0.9rem;margin-bottom:14px;">Sin conexión con el servidor.</div>
+            <button onclick="verificarSesion()" style="width:100%;padding:14px;border:none;border-radius:50px;background:white;color:#0D47A1;font-weight:900;cursor:pointer;">🔄 Reintentar</button>
+        </div>
+    </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="header-logo">
+        <div id="headerAvatar" style="width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.9rem;color:white;flex-shrink:0;">??</div>
+        <div style="min-width:0;">
+            <div class="header-titulo" id="headerTitulo">Cargando...</div>
+            <div class="header-sub" id="headerSub">SEBA BALANCE</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="indicador-carga" id="indicadorCarga" title="Cargando..."></div>
+        <button class="btn-head" onclick="SEBA.reportar('balance')" title="Reportar problema" aria-label="Reportar problema">🐞</button>
+        <button class="btn-head" onclick="irAlInicio()" aria-label="Inicio">🏠</button>
+    </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+    <button class="btn-tool ingreso" onclick="abrirCatalogo()"><i>📚</i>Catálogo</button>
+    <button class="btn-tool" onclick="abrirTransferir()"><i>🔁</i>Transf.</button>
+    <button class="btn-tool hoy" onclick="abrirHoy()"><i>📋</i>Hoy</button>
+    <button class="btn-tool stats" onclick="irA('reportes.html')"><i>📊</i>Reportes</button>
+    <button class="btn-tool" onclick="irA('deudas.html')"><i>🧾</i>Deudas</button>
+    <button class="btn-tool cerrar" onclick="irAlInicio()"><i>🚪</i>Salir</button>
+</div>
+
+<!-- FRANJA: GASTO/INGRESO + SALDOS -->
+<div class="franja">
+    <div class="franja-top">
+        <div class="modo" role="tablist">
+            <button id="modoG" class="g on" onclick="cambiarTipo('GASTO')">GASTOS</button>
+            <button id="modoI" class="i" onclick="cambiarTipo('INGRESO')">INGRESOS</button>
+        </div>
+        <div class="saldo-total" onclick="abrirCuentas()"><div class="l">Saldo total</div><div class="v" id="saldoTotal">—</div></div>
+    </div>
+    <div class="chips" id="chipsCuentas"></div>
+    <div class="aviso-comp" id="avisoComp" onclick="irA('deudas.html','#compromisos')"></div>
+</div>
+
+<!-- BUSCADOR -->
+<div class="buscador-wrap">
+    <div style="position:relative;flex:1;min-width:0;">
+        <input type="text" class="buscador-input" id="buscadorInput" placeholder="🔍 Buscar gasto..." autocomplete="off" autocorrect="off" autocapitalize="off" oninput="buscar()">
+    </div>
+    <button class="btn-cuadro" id="btnHamburguesa" onclick="toggleListaTodos()" aria-label="Ver todos">☰</button>
+    <button class="btn-cuadro" id="btnRecargar" onclick="cargarEstado()" aria-label="Recargar">🔄</button>
+    <div id="buscadorResultados" class="buscador-resultados" style="display:none;"></div>
+</div>
+<div id="listaTodosWrap">
+    <div style="padding:8px 14px;border-bottom:1px solid var(--lavanda-light);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.72rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:1px;" id="listaTodosTitulo">Todos los gastos</span>
+        <button onclick="toggleListaTodos()" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--gris);">✕</button>
+    </div>
+    <div id="listaTodosItems"></div>
+</div>
+
+<!-- BOLETA ACTUAL -->
+<div class="venta-wrap">
+    <div class="venta-header">
+        <span class="venta-titulo" id="boletaTitulo">🧾 Boleta de gasto</span>
+        <button class="btn-limpiar" onclick="limpiarBoleta()">🗑 Limpiar</button>
+    </div>
+    <div id="listaVenta"></div>
+</div>
+
+<!-- TOTAL -->
+<div class="total-bar">
+    <div style="min-width:0;"><div class="total-label" id="totalLabel">Total gasto</div><div class="total-monto" id="totalMonto">$0</div></div>
+    <button class="btn-cobrar" id="btnRegistrar" onclick="abrirConfirm()">Registrar →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== MODAL CONFIRMAR BOLETA ===== -->
+<div class="modal-bg" id="modalConfirm" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo" id="confirmTitulo">Confirmar gasto</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-body">
+            <div class="confirm-items" id="confirmItems"></div>
+            <div class="confirm-total" id="confirmTotal">$0</div>
+            <div class="aviso-curso" id="avisoCurso">⚠️ Esta boleta ya se envió y no hubo confirmación. "Registrar" la reintenta con el mismo número (no se duplica).</div>
+            <div id="confirmCampos">
+                <div class="sub-titulo" id="confirmCuentaTit">¿De qué cuenta sale?</div>
+                <div class="metodos-pago" id="confirmCuentas"></div>
+                <div class="sub-titulo">Fecha</div>
+                <div class="fecha-fila">
+                    <input type="date" class="form-input" id="confirmFecha">
+                    <button class="chip-fecha" onclick="fijarFecha(0)">Hoy</button>
+                    <button class="chip-fecha" onclick="fijarFecha(-1)">Ayer</button>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-acciones">
+            <button class="btn-cancelar-confirm" id="btnCancelConfirm" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-ok-confirm" id="btnOkConfirm" onclick="confirmarBoleta()">✅ Registrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL HOY ===== -->
+<div class="modal-bg" id="modalHoy" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo">📋 Hoy</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-body" id="hoyContenido"></div>
+    </div>
+</div>
+
+<!-- ===== MODAL TRANSFERIR ===== -->
+<div class="modal-bg" id="modalTransf" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo">🔁 Pasar dinero entre cuentas</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-body">
+            <div class="aviso-curso" id="avisoTransf" style="margin-top:10px;">⚠️ Esta transferencia ya se envió sin confirmación. "Transferir" la reintenta (no se duplica).</div>
+            <div class="sub-titulo" style="padding-top:12px;">Sale de</div>
+            <div class="metodos-pago" id="trOrigen"></div>
+            <div class="sub-titulo">Entra en</div>
+            <div class="metodos-pago" id="trDestino"></div>
+            <div class="form-scroll" style="padding-top:0;">
+                <div class="form-grupo"><label class="form-label">Importe</label><input type="text" inputmode="decimal" class="form-input" id="trImporte" placeholder="0"></div>
+                <div class="form-grupo"><label class="form-label">Fecha</label><input type="date" class="form-input" id="trFecha"></div>
+                <div class="form-grupo"><label class="form-label">Detalle (opcional)</label><input type="text" class="form-input" id="trDesc" maxlength="80" placeholder="Ej: retiro del cajero"></div>
+                <div class="form-error" id="trError"></div>
+                <div style="font-size:0.75rem;color:var(--gris);margin-bottom:10px;">No cuenta como gasto ni como ingreso: solo cambia el dinero de lugar.</div>
+            </div>
+        </div>
+        <div class="confirm-acciones">
+            <button class="btn-cancelar-confirm" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-ok-confirm" id="trBtn" onclick="confirmarTransferencia()">🔁 Transferir</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL CATÁLOGO ===== -->
+<div class="modal-bg" id="modalCatalogo" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo">📚 Catálogo</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="tabs"><button class="tab" id="catTabG" onclick="catTab('GASTO')">Gastos</button><button class="tab" id="catTabI" onclick="catTab('INGRESO')">Ingresos</button></div>
+        <div class="modal-body" id="catContenido"></div>
+    </div>
+</div>
+
+<!-- ===== MODAL CUENTAS ===== -->
+<div class="modal-bg" id="modalCuentas" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo">💼 Mis cuentas</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-body" id="ctaContenido"></div>
+    </div>
+</div>
+
+<script src="seba-config.js"></script>
+<script src="seba-comun.js"></script>
+<script>
+window.APP_VERSION = 1;
+window.SEBA_BADGE_BOTTOM = 84;
+const S = window.SEBA;
+const PREFIJO = S.prefijo;
+if (!S.prefijoValido) { location.href = 'index.html'; throw new Error('Sin prefijo'); }
+
+const K_BOLETA = 'seba_boleta_' + PREFIJO;          // boleta que se está armando (como el carrito del POS)
+const K_CURSO  = 'seba_boleta_en_curso_' + PREFIJO; // boleta ENVIADA sin confirmar: congelada, se reintenta con el mismo MovId
+const K_TRANSF = 'seba_transf_en_curso_' + PREFIJO;
+const K_CACHE  = 'seba_catalogo_' + PREFIJO;        // solo catálogo y nombres de cuentas (sin saldos)
+
+let estado = null;
+let productos = [];
+let cuentas = [];
+let boleta = S.ls.get(K_BOLETA) || { tipo: 'GASTO', items: [] };
+if (!boleta.items) boleta = { tipo: 'GASTO', items: [] };
+let cuentaSel = '';
+let enviando = false;
+
+// ========== CABECERA ==========
+document.getElementById('headerTitulo').textContent = PREFIJO;
+document.getElementById('headerAvatar').textContent = PREFIJO;
+document.getElementById('headerSub').textContent = 'SEBA BALANCE · v' + APP_VERSION;
+(function () { const c = S.colorPorPrefijo(PREFIJO); document.getElementById('headerAvatar').style.background = 'linear-gradient(135deg,' + c[0] + ',' + c[1] + ')'; })();
+
+function irA(pagina, hash) { location.href = pagina + '?p=' + PREFIJO + (hash || ''); }
+function irAlInicio() {
+    if (S.ls.get(K_CURSO) && !confirm('Hay una boleta enviada sin confirmar. Queda guardada en este celular.\n\n¿Salir igual?')) return;
+    const t = S.token();
+    S.setToken('');
+    if (t) S.api('cerrarSesion', { token: t }).catch(() => {});
+    setTimeout(() => location.href = 'index.html', 150);
+}
+
+// ========== SESIÓN (PIN) ==========
+function mostrarFormularioPin(msg) {
+    document.getElementById('overlayPin').style.display = 'flex';
+    document.getElementById('overlayPinTitulo').textContent = 'Ingresá tu PIN';
+    document.getElementById('overlayPinSub').textContent = PREFIJO;
+    document.getElementById('overlayPinForm').style.display = 'block';
+    document.getElementById('overlayPinRed').style.display = 'none';
+    document.getElementById('overlayPinError').textContent = msg || '';
+    const i = document.getElementById('overlayPinInput'); i.value = ''; setTimeout(() => i.focus(), 50);
+}
+function ocultarOverlayPin() { document.getElementById('overlayPin').style.display = 'none'; }
+async function intentarLoginPin() {
+    const pin = document.getElementById('overlayPinInput').value.trim();
+    const btn = document.getElementById('overlayPinBtn');
+    if (!/^\d{6}$/.test(pin)) { document.getElementById('overlayPinError').textContent = 'El PIN debe tener 6 números'; return; }
+    btn.disabled = true; btn.textContent = 'Verificando...';
+    const r = await S.api('clienteLogin', { prefijo: PREFIJO, pin: pin }, { token: false, prefijo: '' });
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if (r && r.success && r.token) { S.setToken(r.token); verificarSesion(); }
+    else mostrarFormularioPin(r ? (r.error || 'PIN incorrecto') : 'Sin conexión. Probá de nuevo.');
+}
+async function verificarSesion() {
+    if (!S.configurado) { mostrarFormularioPin('Falta configurar la dirección del servidor (seba-config.js)'); return; }
+    if (!S.token()) { mostrarFormularioPin(); return; }
+    document.getElementById('overlayPinTitulo').textContent = 'Verificando sesión...';
+    document.getElementById('overlayPinForm').style.display = 'none';
+    document.getElementById('overlayPinRed').style.display = 'none';
+    const ok = await cargarEstado(true);
+    if (ok === 'red') {
+        // Sin conexión: si hay catálogo guardado se puede armar la boleta igual (se envía después).
+        const cache = S.ls.get(K_CACHE);
+        if (cache) { aplicarCache(cache); ocultarOverlayPin(); S.toast('📴 Sin conexión: podés armar la boleta, se envía cuando vuelva la señal', 'naranja', 4000); }
+        else { document.getElementById('overlayPinTitulo').textContent = 'Sin conexión'; document.getElementById('overlayPinRed').style.display = 'block'; }
+    } else if (ok) {
+        ocultarOverlayPin();
+        resolverPendientes();
+    }
+}
+
+// ========== DATOS ==========
+function aplicarCache(c) {
+    productos = c.productos || []; cuentas = c.cuentas || [];
+    if (c.nombre) document.getElementById('headerTitulo').textContent = c.nombre;
+    renderTodo();
+}
+async function cargarEstado(silencioso) {
+    const btnR = document.getElementById('btnRecargar'), ind = document.getElementById('indicadorCarga');
+    btnR.textContent = '⏳'; btnR.disabled = true;
+    ind.className = 'indicador-carga cargando';
+    const r = await S.api('getEstado', {});
+    btnR.textContent = '🔄'; btnR.disabled = false;
+    if (!r) { ind.className = 'indicador-carga'; ind.title = 'Sin conexión'; if (!silencioso) S.toast('❌ Sin conexión', 'rojo'); return 'red'; }
+    if (r.sesion || r.error) {
+        ind.className = 'indicador-carga';
+        if (r.sesion) { S.setToken(''); mostrarFormularioPin(r.error); return false; }
+        S.toast('❌ ' + r.error, 'rojo'); return false;
+    }
+    estado = r;
+    productos = r.productos || [];
+    cuentas = r.cuentas || [];
+    S.ls.set(K_CACHE, { nombre: r.nombre, productos: productos, cuentas: cuentas.map(c => ({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, activo: c.activo, orden: c.orden })) });
+    if (r.nombre) { document.getElementById('headerTitulo').textContent = r.nombre; document.title = r.nombre + ' · SEBA BALANCE'; }
+    ind.className = 'indicador-carga ok'; ind.title = productos.length + ' conceptos';
+    if (r.avisos && r.avisos.length) console.warn('Avisos del servidor:', r.avisos);
+    renderTodo();
+    return true;
+}
+function renderTodo() { renderModo(); renderFranja(); renderBoleta(); if (listaAbierta) renderListaTodos(); }
+
+function renderFranja() {
+    const act = cuentas.filter(c => c.activo !== false);
+    document.getElementById('saldoTotal').textContent = estado ? S.fmt(estado.total) : '—';
+    document.getElementById('chipsCuentas').innerHTML = act.map(c =>
+        '<span class="chip-cta' + (c.saldo < 0 ? ' neg' : '') + '" onclick="abrirCuentas()">' + S.esc(c.nombre) + ' <b>' + (c.saldo !== undefined ? S.fmt(c.saldo) : '') + '</b></span>').join('');
+    const av = document.getElementById('avisoComp');
+    const comp = estado ? (estado.compromisosPendientes || []) : [];
+    if (comp.length) {
+        const venc = comp.filter(c => c.vence < estado.hoy).length;
+        av.textContent = '⏰ ' + comp.length + (comp.length === 1 ? ' compromiso pendiente' : ' compromisos pendientes') + ' este mes' + (venc ? ' · ' + venc + ' vencido' + (venc > 1 ? 's' : '') : '') + ' ›';
+        av.style.display = 'block';
+    } else av.style.display = 'none';
+}
+
+// ========== GASTO / INGRESO ==========
+function enCurso() { return S.ls.get(K_CURSO); }
+function boletaBloqueada() {
+    if (!enCurso()) return false;
+    S.toast('⚠️ Boleta enviada sin confirmar: registrala o descartala con Limpiar', 'rojo', 3500);
+    return true;
+}
+function cambiarTipo(t) {
+    if (t === boleta.tipo) return;
+    if (boletaBloqueada()) return;
+    if (boleta.items.length && !confirm('La boleta tiene ' + boleta.items.length + ' renglón(es) de ' + (boleta.tipo === 'GASTO' ? 'gasto' : 'ingreso') + '.\n\n¿Vaciarla y pasar a ' + (t === 'GASTO' ? 'gastos' : 'ingresos') + '?')) return;
+    boleta = { tipo: t, items: [] };
+    guardarBoleta(); renderTodo();
+}
+function renderModo() {
+    const g = boleta.tipo === 'GASTO';
+    document.getElementById('modoG').classList.toggle('on', g);
+    document.getElementById('modoI').classList.toggle('on', !g);
+    document.getElementById('buscadorInput').placeholder = g ? '🔍 Buscar gasto...' : '🔍 Buscar ingreso...';
+    document.getElementById('listaTodosTitulo').textContent = g ? 'Todos los gastos' : 'Todos los ingresos';
+    document.getElementById('totalLabel').textContent = g ? 'Total gasto' : 'Total ingreso';
+}
+function delTipo() { return productos.filter(p => p.tipo === boleta.tipo); }
+
+// ========== BUSCADOR (de VAO POS, con palabras de finanzas) ==========
+const SINONIMOS = {
+    super: ['super', 'supermercado', 'mercado', 'almacen', 'chino', 'compras'],
+    nafta: ['nafta', 'combustible', 'gasoil', 'gnc', 'estacion'],
+    luz: ['luz', 'electricidad', 'energia', 'edersa'],
+    gas: ['gas', 'garrafa', 'camuzzi'],
+    celu: ['celu', 'celular', 'telefonia', 'telefono', 'movil', 'recarga'],
+    internet: ['internet', 'wifi', 'fibra', 'cable'],
+    remedio: ['remedio', 'remedios', 'medicamento', 'medicamentos', 'farmacia'],
+    medico: ['medico', 'doctor', 'consulta', 'turno', 'dentista'],
+    colectivo: ['colectivo', 'bondi', 'pasaje', 'pasajes', 'sube', 'micro'],
+    taxi: ['taxi', 'remis', 'uber', 'cabify'],
+    alquiler: ['alquiler', 'renta', 'hipoteca', 'expensas'],
+    comida: ['comida', 'comidas', 'restaurante', 'resto', 'almuerzo', 'cena', 'delivery', 'pedidos'],
+    carne: ['carne', 'carniceria', 'asado', 'pollo', 'polleria'],
+    verdura: ['verdura', 'verduleria', 'fruta', 'frutas'],
+    ropa: ['ropa', 'vestimenta', 'zapatillas', 'calzado'],
+    sueldo: ['sueldo', 'salario', 'haberes', 'cobro', 'quincena'],
+    venta: ['venta', 'ventas', 'vendi'],
+    netflix: ['netflix', 'spotify', 'streaming', 'disney', 'youtube', 'musica'],
+    escuela: ['escuela', 'colegio', 'facultad', 'cuota', 'cursada', 'utiles']
+};
+function normalizar(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function expandir(t) {
+    const pal = t.split(' ').filter(Boolean), out = new Set(pal);
+    pal.forEach(p => Object.values(SINONIMOS).forEach(g => { if (g.some(s => s === p || (p.length >= 3 && s.startsWith(p)))) g.forEach(s => out.add(s)); }));
+    return [...out];
+}
+function score(nombre, terminos) {
+    let sc = 0; const pals = nombre.split(' ');
+    terminos.forEach(t => {
+        if (!t) return;
+        if (nombre === t) sc += 100; else if (nombre.startsWith(t)) sc += 60;
+        else if (pals.some(p => p === t)) sc += 50; else if (pals.some(p => p.startsWith(t))) sc += 35; else if (nombre.includes(t)) sc += 20;
+    });
+    return sc;
+}
+function resultadosBusqueda(q) {
+    const n = normalizar(q); if (!n) return [];
+    const ts = expandir(n);
+    return delTipo().map(p => ({ p, s: score(normalizar(p.name), ts) * 2 + score(normalizar(p.category), ts) }))
+        .filter(x => x.s > 0).sort((a, b) => b.s - a.s || (b.p.uso || 0) - (a.p.uso || 0)).map(x => x.p).slice(0, 15);
+}
+let _bt;
+function buscar() {
+    clearTimeout(_bt);
+    _bt = setTimeout(() => {
+        const q = document.getElementById('buscadorInput').value.trim(), div = document.getElementById('buscadorResultados');
+        if (!q) { div.style.display = 'none'; return; }
+        const m = resultadosBusqueda(q);
+        div.innerHTML = m.length ? m.map(p => '<div class="resultado-item" onclick="agregar(\'' + p.codigo + '\')"><div style="min-width:0;"><div style="font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + S.esc(p.name) +
+            '</div><div style="font-size:0.7rem;color:var(--gris);">' + S.esc(p.category) + '</div></div><div style="font-weight:900;color:var(--lavanda-dark);margin-left:10px;white-space:nowrap;">' + (p.price ? S.fmt(p.price) : '') + '</div></div>').join('')
+            : '<div style="padding:12px 16px;color:#aaa;font-size:0.85rem;">Sin resultados para <b>' + S.esc(q) + '</b>. Podés crearlo en 📚 Catálogo.</div>';
+        div.style.display = 'block';
+    }, 80);
+}
+document.addEventListener('click', e => { if (!e.target.closest('.buscador-wrap')) document.getElementById('buscadorResultados').style.display = 'none'; });
+
+let listaAbierta = false;
+function toggleListaTodos() {
+    listaAbierta = !listaAbierta;
+    document.getElementById('listaTodosWrap').style.display = listaAbierta ? 'block' : 'none';
+    const b = document.getElementById('btnHamburguesa');
+    b.style.background = listaAbierta ? 'var(--lavanda-light)' : 'white';
+    b.style.borderColor = listaAbierta ? 'var(--lavanda)' : 'var(--lavanda-light)';
+    if (listaAbierta) renderListaTodos();
+}
+function porCategoria(lista) {
+    const cats = {}, ordenCat = {};
+    lista.forEach(p => { (cats[p.category] = cats[p.category] || []).push(p); ordenCat[p.category] = Math.min(ordenCat[p.category] || 9999, p.orden || 99); });
+    return Object.keys(cats).sort((a, b) => ordenCat[a] - ordenCat[b] || a.localeCompare(b)).map(c => ({ cat: c, items: cats[c].sort((a, b) => (a.orden || 99) - (b.orden || 99)) }));
+}
+function renderListaTodos() {
+    const g = porCategoria(delTipo());
+    document.getElementById('listaTodosItems').innerHTML = g.length ? g.map(x => '<div class="lt-cat">' + S.esc(x.cat) + '</div>' + x.items.map(p =>
+        '<div class="lt-item" onclick="agregar(\'' + p.codigo + '\')"><div style="font-size:0.88rem;font-weight:600;min-width:0;">' + S.esc(p.name) + '</div><div style="font-weight:700;color:var(--lavanda);white-space:nowrap;">' + (p.price ? S.fmt(p.price) : '＋') + '</div></div>').join('')).join('')
+        : '<div class="vacio">Sin conceptos. Crealos en 📚 Catálogo.</div>';
+}
+
+// ========== BOLETA ==========
+function guardarBoleta() { S.ls.set(K_BOLETA, boleta); }
+function pedirImporte(nombre, actual) {
+    const t = prompt('Importe para ' + nombre + ':', actual ? String(actual).replace('.', ',') : '');
+    if (t === null) return undefined;
+    const n = S.leerImporte(t);
+    if (n === null || isNaN(n) || n <= 0 || n >= 1e12) { S.toast('⚠️ Importe inválido', 'rojo'); return undefined; }
+    return n;
+}
+function agregar(codigo) {
+    if (boletaBloqueada()) return;
+    const p = productos.find(x => x.codigo === codigo);
+    if (!p) return;
+    document.getElementById('buscadorInput').value = '';
+    document.getElementById('buscadorResultados').style.display = 'none';
+    if (boleta.items.length >= 60) { S.toast('Máximo 60 renglones por boleta', 'rojo'); return; }
+    let imp = p.price || null;
+    if (!imp) { const n = pedirImporte(p.name, ''); if (n !== undefined) imp = n; }
+    boleta.items.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), codigo: p.codigo, name: p.name, category: p.category, importe: imp, descripcion: '' });
+    guardarBoleta(); renderBoleta();
+    if (listaAbierta) toggleListaTodos();
+    S.toast('✅ ' + p.name.substring(0, 28), 'verde', 1400);
+}
+function editarImporte(uid) {
+    if (boletaBloqueada()) return;
+    const it = boleta.items.find(i => i.uid === uid); if (!it) return;
+    const n = pedirImporte(it.name, it.importe); if (n === undefined) return;
+    it.importe = n; guardarBoleta(); renderBoleta();
+}
+function editarDescripcion(uid) {
+    if (boletaBloqueada()) return;
+    const it = boleta.items.find(i => i.uid === uid); if (!it) return;
+    const t = prompt('Detalle para ' + it.name + ' (opcional):', it.descripcion || '');
+    if (t === null) return;
+    it.descripcion = t.trim().slice(0, 80); guardarBoleta(); renderBoleta();
+}
+function quitar(uid) {
+    if (boletaBloqueada()) return;
+    boleta.items = boleta.items.filter(i => i.uid !== uid); guardarBoleta(); renderBoleta();
+}
+function limpiarBoleta() {
+    const c = enCurso();
+    if (c) {
+        if (!confirm('Hay una boleta enviada sin confirmar (' + c.movId + ').\n\nSi ya llegó al servidor, quedará registrada (la vas a ver en 📋 Hoy).\n\n¿Descartarla de este celular?')) return;
+        S.ls.del(K_CURSO); boleta = { tipo: boleta.tipo, items: [] }; guardarBoleta(); renderBoleta();
+        S.toast('🗑 Boleta en curso descartada', 'rojo'); return;
+    }
+    if (boleta.items.length && !confirm('¿Limpiar la boleta actual?')) return;
+    boleta = { tipo: boleta.tipo, items: [] }; guardarBoleta(); renderBoleta();
+}
+function totalBoleta(items) { return S.suma(items, i => i.importe || 0); }
+function renderBoleta() {
+    const c = enCurso();
+    const items = c ? c.items : boleta.items;
+    document.getElementById('totalMonto').textContent = S.fmt(totalBoleta(items));
+    document.getElementById('boletaTitulo').innerHTML = (boleta.tipo === 'GASTO' ? '🧾 Boleta de gasto' : '🧾 Boleta de ingreso') +
+        (items.length ? ' · ' + items.length : '') + (c ? ' <span class="pend">· enviada sin confirmar</span>' : '');
+    const lista = document.getElementById('listaVenta');
+    if (!items.length) {
+        const top = delTipo().slice().sort((a, b) => (b.uso || 0) - (a.uso || 0) || (a.orden || 99) - (b.orden || 99)).slice(0, 8);
+        lista.innerHTML = '<div class="vacio-txt">' + (productos.length ? 'Tocá una tarjeta o buscá ' + (boleta.tipo === 'GASTO' ? 'un gasto' : 'un ingreso') + ' para empezar' : 'Cargando catálogo...') + '</div>' +
+            '<div class="tarjetas">' + top.map(p => '<div class="tarjeta' + (p.tipo === 'INGRESO' ? ' i' : '') + '" onclick="agregar(\'' + p.codigo + '\')"><div class="n">' + S.esc(p.name) + '</div><div class="c">' + S.esc(p.category) + '</div>' +
+            (p.price ? '<div class="p">' + S.fmt(p.price) + '</div>' : '') + '</div>').join('') + '</div>';
+        return;
+    }
+    lista.innerHTML = items.map(it =>
+        '<div class="item-venta"><div class="item-info"><div class="item-nombre">' + S.esc(it.name) + '</div><div class="item-cat">' + S.esc(it.category) + '</div>' +
+        '<div class="item-desc' + (it.descripcion ? '' : ' vacia') + '" onclick="editarDescripcion(\'' + it.uid + '\')">' + (it.descripcion ? '✎ ' + S.esc(it.descripcion) : '✎ agregar detalle') + '</div></div>' +
+        '<div class="item-precio' + (it.importe ? '' : ' falta') + '" onclick="editarImporte(\'' + it.uid + '\')">' + (it.importe ? S.fmt(it.importe) : '$ ?') + '</div>' +
+        '<button class="btn-quitar" onclick="quitar(\'' + it.uid + '\')" aria-label="Quitar">✕</button></div>').join('');
+}
+
+// ========== MODALES + BOTÓN ATRÁS ==========
+let modalAbierto = null;
+function abrirModal(id) {
+    if (modalAbierto) document.getElementById(modalAbierto).classList.remove('open');
+    else history.pushState({ seba: 'modal' }, '');
+    modalAbierto = id;
+    document.getElementById(id).classList.add('open');
+}
+function cerrarModal(desdeAtras) {
+    if (!modalAbierto) return;
+    document.getElementById(modalAbierto).classList.remove('open');
+    if (modalAbierto === 'modalConfirm') reiniciarConfirm();
+    modalAbierto = null;
+    if (!desdeAtras && history.state && history.state.seba === 'modal') history.back();
+}
+window.addEventListener('popstate', () => { if (modalAbierto) cerrarModal(true); });
+
+// ========== CONFIRMAR BOLETA (= Cobrar del POS) ==========
+let confirmHecho = false;
+function cuentaBotones(contId, sel, onclickFn, deshabilitado) {
+    document.getElementById(contId).innerHTML = cuentas.filter(c => c.activo !== false).map(c =>
+        '<button class="btn-metodo' + (c.codigo === sel ? ' activo' : '') + '"' + (deshabilitado ? ' disabled' : '') + ' onclick="' + onclickFn + '(\'' + c.codigo + '\')">' + S.esc(c.nombre) +
+        (c.saldo !== undefined ? '<small>' + S.fmt(c.saldo) + '</small>' : '') + '</button>').join('') || '<div style="color:var(--rojo);font-size:0.85rem;">No hay cuentas activas. Creá una en 💼 Saldo total.</div>';
+}
+function fijarFecha(dias) { const d = new Date(); d.setDate(d.getDate() + dias); if (!enCurso()) document.getElementById('confirmFecha').value = S.hoy(d); }
+function elegirCuenta(cod) { if (enCurso()) return; cuentaSel = cod; S.ls.set('seba_ultima_cuenta_' + PREFIJO + '_' + boleta.tipo, cod); cuentaBotones('confirmCuentas', cuentaSel, 'elegirCuenta'); }
+function abrirConfirm() {
+    const c = enCurso();
+    const items = c ? c.items : boleta.items;
+    if (!items.length) { S.toast('Agregá al menos un renglón', 'rojo'); return; }
+    if (!c) {
+        const sinImp = items.filter(i => !i.importe);
+        if (sinImp.length) { S.toast('⚠️ Falta el importe de ' + sinImp.map(i => i.name).join(', ').substring(0, 60), 'rojo', 3500); editarImporte(sinImp[0].uid); return; }
+    }
+    const tipo = c ? c.tipo : boleta.tipo;
+    confirmHecho = false;
+    document.getElementById('confirmTitulo').textContent = tipo === 'GASTO' ? 'Confirmar gasto' : 'Confirmar ingreso';
+    document.getElementById('confirmCuentaTit').textContent = tipo === 'GASTO' ? '¿De qué cuenta sale?' : '¿A qué cuenta entra?';
+    document.getElementById('confirmItems').innerHTML = items.map(i => '<div class="confirm-item"><span>' + S.esc(i.name) + (i.descripcion ? '<small>' + S.esc(i.descripcion) + '</small>' : '') + '</span><strong>' + S.fmt(i.importe) + '</strong></div>').join('');
+    document.getElementById('confirmTotal').textContent = S.fmt(totalBoleta(items));
+    document.getElementById('avisoCurso').style.display = c ? 'block' : 'none';
+    document.getElementById('confirmCampos').style.display = '';
+    if (c) { cuentaSel = c.cuenta; document.getElementById('confirmFecha').value = c.fecha; }
+    else {
+        const act = cuentas.filter(x => x.activo !== false);
+        const ult = S.ls.get('seba_ultima_cuenta_' + PREFIJO + '_' + tipo);
+        cuentaSel = act.some(x => x.codigo === ult) ? ult : (act[0] ? act[0].codigo : '');
+        document.getElementById('confirmFecha').value = S.hoy();
+    }
+    document.getElementById('confirmFecha').disabled = !!c;
+    cuentaBotones('confirmCuentas', cuentaSel, 'elegirCuenta', !!c);
+    abrirModal('modalConfirm');
+    if (c) S.toast('⚠️ Boleta enviada sin confirmar: Registrar la reintenta', 'rojo', 3000);
+}
+function reiniciarConfirm() {
+    const b = document.getElementById('btnOkConfirm'); b.disabled = false; b.textContent = '✅ Registrar';
+    document.getElementById('btnCancelConfirm').textContent = 'Cancelar';
+}
+async function confirmarBoleta() {
+    if (confirmHecho) { cerrarModal(); return; }
+    if (enviando) return;
+    const btn = document.getElementById('btnOkConfirm');
+    let c = enCurso();
+    if (!c) {
+        const fecha = document.getElementById('confirmFecha').value;
+        if (!cuentaSel) { S.toast('Elegí una cuenta', 'rojo'); return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { S.toast('Elegí la fecha', 'rojo'); return; }
+        if (boleta.items.some(i => !i.importe)) { S.toast('Hay renglones sin importe', 'rojo'); return; }
+        // EDITABLE → ENVIADA SIN CONFIRMAR (se guarda ANTES de enviar, como VAO POS V11)
+        c = { movId: S.nuevoMovId(), tipo: boleta.tipo, cuenta: cuentaSel, fecha: fecha, items: boleta.items.map(i => Object.assign({}, i)), hora: new Date().toLocaleTimeString('es-AR') };
+        if (!S.ls.set(K_CURSO, c)) { S.toast('❌ No se pudo guardar en este celular (memoria llena o navegación privada)', 'rojo', 4000); return; }
+        renderBoleta();
+    }
+    enviando = true; btn.disabled = true; btn.textContent = '⏳ Registrando...';
+    const r = await S.api('registrarBoleta', { movId: c.movId, tipo: c.tipo, fecha: c.fecha, cuenta: c.cuenta,
+        items: c.items.map(i => ({ codigo: i.codigo, importe: i.importe, descripcion: i.descripcion || '' })) });
+    enviando = false; btn.disabled = false; btn.textContent = '✅ Registrar';
+    if (r && r.success === false && r.definitivo) {
+        // Rechazo seguro: el servidor NO escribió nada → la boleta vuelve a ser editable.
+        S.ls.del(K_CURSO);
+        boleta = { tipo: c.tipo, items: c.items }; guardarBoleta();
+        renderBoleta(); cerrarModal();
+        alert('No se registró la boleta.\n\n' + (r.error || '') + '\n\nCorregí la boleta y volvé a registrar.');
+        cargarEstado(true);
+        return;
+    }
+    if (!r || r.success !== true) {
+        document.getElementById('avisoCurso').style.display = 'block';
+        document.getElementById('confirmFecha').disabled = true;
+        cuentaBotones('confirmCuentas', c.cuenta, 'elegirCuenta', true);
+        S.toast(S.motivo(r, 'La boleta quedó guardada en este celular: tocá Registrar de nuevo (no se duplica).'), 'rojo', 4500);
+        if (r && r.sesion) { S.setToken(''); cerrarModal(); mostrarFormularioPin('Tu sesión venció. Ingresá el PIN: la boleta sigue guardada.'); }
+        return;
+    }
+    // Éxito (nueva o ya existente)
+    S.ls.del(K_CURSO);
+    boleta = { tipo: c.tipo, items: [] }; guardarBoleta();
+    confirmHecho = true;
+    document.getElementById('avisoCurso').style.display = 'none';
+    document.getElementById('confirmCampos').style.display = 'none';
+    const cta = cuentas.find(x => x.codigo === c.cuenta);
+    document.getElementById('confirmItems').insertAdjacentHTML('afterbegin', '<div style="text-align:center;font-weight:900;color:var(--verde);padding:6px 0 10px;">✅ ' +
+        (r.yaExistia ? 'Ya estaba registrada' : 'Registrada') + ' · ' + S.esc(cta ? cta.nombre : c.cuenta) + ' · ' + S.fechaCorta(c.fecha) + '</div>');
+    btn.textContent = '✔ Listo'; document.getElementById('btnCancelConfirm').textContent = 'Cerrar';
+    renderBoleta();
+    S.toast('✅ ' + (c.tipo === 'GASTO' ? 'Gasto' : 'Ingreso') + ' registrado', 'verde');
+    cargarEstado(true);
+}
+
+// Al entrar: si quedó algo enviado sin confirmar, preguntarle al servidor si llegó.
+async function resolverPendientes() {
+    const c = enCurso();
+    if (c) {
+        const r = await S.api('verificarOperacion', { id: c.movId });
+        if (r && r.success && r.existe) {
+            S.ls.del(K_CURSO); boleta = { tipo: c.tipo, items: [] }; guardarBoleta(); renderBoleta();
+            S.toast('✅ La boleta que quedó pendiente SÍ se había registrado', 'verde', 4000);
+            cargarEstado(true);
+        } else if (r && r.success) {
+            S.toast('⚠️ Tenés una boleta sin enviar: tocá Registrar para enviarla', 'naranja', 4000);
+        }
+    }
+    const t = S.ls.get(K_TRANSF);
+    if (t) {
+        const r = await S.api('verificarOperacion', { id: t.movId });
+        if (r && r.success && r.existe) { S.ls.del(K_TRANSF); S.toast('✅ La transferencia pendiente SÍ se había registrado', 'verde', 4000); cargarEstado(true); }
+    }
+}
+
+// ========== HOY ==========
+async function abrirHoy() {
+    abrirModal('modalHoy');
+    const cont = document.getElementById('hoyContenido');
+    cont.innerHTML = '<div class="vacio">Cargando...</div>';
+    const hoy = S.hoy();
+    const r = await S.api('getMovimientos', { desde: hoy, hasta: hoy });
+    if (!r || !r.success) { cont.innerHTML = '<div class="vacio">' + S.esc(S.motivo(r, 'Probá de nuevo.')) + '</div>'; return; }
+    const grupos = {}, orden = [];
+    r.movimientos.forEach(m => { if (!grupos[m.movId]) { grupos[m.movId] = []; orden.push(m.movId); } grupos[m.movId].push(m); });
+    const act = r.movimientos.filter(m => m.estado === 'ACTIVO');
+    const g = S.suma(act.filter(m => m.tipo === 'GASTO'), m => m.importe), i = S.suma(act.filter(m => m.tipo === 'INGRESO'), m => m.importe);
+    const nombreCta = cod => { const x = cuentas.find(c => c.codigo === cod); return x ? x.nombre : cod; };
+    cont.innerHTML = '<div class="resumen-card"><div class="resumen-stat"><span>Gastos de hoy</span><b style="color:var(--rojo)">' + S.fmt(g) + '</b></div>' +
+        '<div class="resumen-stat"><span>Ingresos de hoy</span><b style="color:var(--verde)">' + S.fmt(i) + '</b></div>' +
+        '<div class="resumen-stat"><span>Saldo total</span><b>' + (estado ? S.fmt(estado.total) : '—') + '</b></div></div>' +
+        (orden.length ? orden.reverse().map(id => {
+            const f = grupos[id], f0 = f[0], anul = f.every(x => x.estado !== 'ACTIVO');
+            const tot = S.suma(f.filter(x => x.estado === 'ACTIVO'), x => x.importe);
+            const tipoTxt = { GASTO: 'Gasto', INGRESO: 'Ingreso', TRANSFERENCIA: 'Transferencia', DEUDA_ALTA: 'Deuda', PAGO_DEUDA: 'Pago de deuda' }[f0.tipo] || f0.tipo;
+            return '<div class="venta-detalle' + (anul ? ' anulado' : '') + '"><div class="venta-hora">🕐 ' + S.esc(String(f0.fechaRegistro).slice(11, 16)) + ' · ' + tipoTxt + ' · ' +
+                S.esc(nombreCta(f0.cuenta)) + (f0.cuentaDestino ? ' → ' + S.esc(nombreCta(f0.cuentaDestino)) : '') + '<span class="venta-monto">' + S.fmt(anul ? S.suma(f, x => x.importe) : tot) + '</span></div>' +
+                '<div class="venta-items-text">' + f.map(x => (x.estado !== 'ACTIVO' ? '<s>' : '') + S.esc(x.concepto) + (x.descripcion ? ' (' + S.esc(x.descripcion) + ')' : '') + ' ' + S.fmt(x.importe) + (x.estado !== 'ACTIVO' ? '</s>' : '')).join(' · ') + '</div></div>';
+        }).join('') + '<div style="text-align:center;font-size:0.78rem;color:var(--gris);padding:8px 20px 18px;">Para anular un renglón: 📊 Reportes → tocá la boleta.</div>'
+        : '<div class="vacio">Todavía no hay movimientos hoy.</div>');
+}
+
+// ========== TRANSFERIR ==========
+let trOrigen = '', trDestino = '';
+function abrirTransferir() {
+    const t = S.ls.get(K_TRANSF);
+    const act = cuentas.filter(c => c.activo !== false);
+    if (act.length < 2 && !t) { S.toast('Necesitás al menos 2 cuentas activas', 'rojo'); return; }
+    document.getElementById('trError').textContent = '';
+    if (t) {
+        trOrigen = t.origen; trDestino = t.destino;
+        document.getElementById('trImporte').value = String(t.importe).replace('.', ',');
+        document.getElementById('trFecha').value = t.fecha; document.getElementById('trDesc').value = t.descripcion || '';
+    } else {
+        trOrigen = act[0].codigo; trDestino = act[1].codigo;
+        document.getElementById('trImporte').value = ''; document.getElementById('trFecha').value = S.hoy(); document.getElementById('trDesc').value = '';
+    }
+    ['trImporte', 'trFecha', 'trDesc'].forEach(id => document.getElementById(id).disabled = !!t);
+    document.getElementById('avisoTransf').style.display = t ? 'block' : 'none';
+    document.getElementById('trBtn').textContent = '🔁 Transferir';
+    renderTrCuentas();
+    abrirModal('modalTransf');
+}
+function renderTrCuentas() {
+    const bloq = !!S.ls.get(K_TRANSF);
+    cuentaBotones('trOrigen', trOrigen, 'trElegirO', bloq);
+    cuentaBotones('trDestino', trDestino, 'trElegirD', bloq);
+}
+function trElegirO(c) { trOrigen = c; if (trDestino === c) trDestino = ''; renderTrCuentas(); }
+function trElegirD(c) { trDestino = c; if (trOrigen === c) trOrigen = ''; renderTrCuentas(); }
+async function confirmarTransferencia() {
+    if (enviando) return;
+    const err = document.getElementById('trError'), btn = document.getElementById('trBtn');
+    if (btn.textContent.indexOf('Listo') !== -1) { cerrarModal(); return; }
+    let t = S.ls.get(K_TRANSF);
+    if (!t) {
+        const imp = S.leerImporte(document.getElementById('trImporte').value), fecha = document.getElementById('trFecha').value;
+        if (!trOrigen || !trDestino) { err.textContent = 'Elegí de dónde sale y a dónde entra'; return; }
+        if (trOrigen === trDestino) { err.textContent = 'Tienen que ser cuentas distintas'; return; }
+        if (!imp || isNaN(imp) || imp <= 0) { err.textContent = 'Escribí el importe'; return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { err.textContent = 'Elegí la fecha'; return; }
+        t = { movId: S.nuevoMovId(), origen: trOrigen, destino: trDestino, importe: imp, fecha: fecha, descripcion: document.getElementById('trDesc').value.trim().slice(0, 80) };
+        if (!S.ls.set(K_TRANSF, t)) { err.textContent = 'No se pudo guardar en este celular'; return; }
+        ['trImporte', 'trFecha', 'trDesc'].forEach(id => document.getElementById(id).disabled = true);
+        renderTrCuentas();
+    }
+    err.textContent = ''; enviando = true; btn.disabled = true; btn.textContent = '⏳ Transfiriendo...';
+    const r = await S.api('registrarTransferencia', t);
+    enviando = false; btn.disabled = false; btn.textContent = '🔁 Transferir';
+    if (r && r.success === false && r.definitivo) {
+        S.ls.del(K_TRANSF); err.textContent = '❌ ' + r.error;
+        ['trImporte', 'trFecha', 'trDesc'].forEach(id => document.getElementById(id).disabled = false);
+        document.getElementById('avisoTransf').style.display = 'none'; renderTrCuentas(); return;
+    }
+    if (!r || r.success !== true) {
+        document.getElementById('avisoTransf').style.display = 'block';
+        err.textContent = S.motivo(r, 'Quedó guardada en este celular: tocá Transferir de nuevo (no se duplica).');
+        if (r && r.sesion) { S.setToken(''); cerrarModal(); mostrarFormularioPin('Tu sesión venció. La transferencia sigue guardada.'); }
+        return;
+    }
+    S.ls.del(K_TRANSF);
+    document.getElementById('avisoTransf').style.display = 'none';
+    err.innerHTML = '<span style="color:var(--verde);font-weight:900;">✅ ' + (r.yaExistia ? 'Ya estaba registrada' : 'Transferencia registrada') + '</span>';
+    btn.textContent = '✔ Listo';
+    cargarEstado(true);
+}
+
+// ========== CATÁLOGO ==========
+let catTipo = 'GASTO', catEdit = null, opNuevoConcepto = null;
+function abrirCatalogo() { catTipo = boleta.tipo; catEdit = null; renderCatalogo(); abrirModal('modalCatalogo'); }
+function catTab(t) { catTipo = t; catEdit = null; renderCatalogo(); }
+function catalogoCompleto() { return (estado && estado.catalogoCompleto) || productos; }
+function renderCatalogo() {
+    document.getElementById('catTabG').classList.toggle('on', catTipo === 'GASTO');
+    document.getElementById('catTabI').classList.toggle('on', catTipo === 'INGRESO');
+    const cont = document.getElementById('catContenido');
+    if (!estado) { cont.innerHTML = '<div class="vacio">Sin conexión: el catálogo se edita con internet.</div>'; return; }
+    if (catEdit) { renderFormConcepto(); return; }
+    const g = porCategoria(catalogoCompleto().filter(p => p.tipo === catTipo));
+    cont.innerHTML = '<div style="padding:10px 16px 4px;"><button class="btn-guardar" style="margin:0;" onclick="nuevoConcepto()">＋ Nuevo ' + (catTipo === 'GASTO' ? 'gasto' : 'ingreso') + '</button></div>' +
+        g.map(x => '<div class="lt-cat">' + S.esc(x.cat) + '</div>' + x.items.map(p =>
+            '<div class="fila' + (p.activo === false ? ' off' : '') + '" onclick="editarConcepto(\'' + p.codigo + '\')"><div style="min-width:0;"><div class="n">' + S.esc(p.name) + '</div><div class="d">' +
+            (p.price ? 'Sugerido ' + S.fmt(p.price) + ' · ' : '') + (p.uso || 0) + ' uso' + (p.uso === 1 ? '' : 's') + '</div></div>' + (p.activo === false ? '<span class="badge r">oculto</span>' : '<span style="color:var(--gris)">›</span>') + '</div>').join('')).join('') +
+        '<div style="height:16px"></div>';
+}
+function nuevoConcepto() { catEdit = { nuevo: true, tipo: catTipo, name: '', category: '', price: null, activo: true }; opNuevoConcepto = null; renderCatalogo(); }
+function editarConcepto(cod) { const p = catalogoCompleto().find(x => x.codigo === cod); if (p) { catEdit = Object.assign({}, p); renderCatalogo(); } }
+function renderFormConcepto() {
+    const e = catEdit, cats = [...new Set(catalogoCompleto().filter(p => p.tipo === e.tipo).map(p => p.category))].sort();
+    document.getElementById('catContenido').innerHTML = '<div class="form-scroll">' +
+        '<div class="form-grupo"><label class="form-label">' + (e.tipo === 'GASTO' ? 'Gasto' : 'Ingreso') + '</label><input class="form-input" id="ceNombre" maxlength="45" style="text-transform:uppercase" value="' + S.esc(e.name) + '" placeholder="Ej: KIOSCO"></div>' +
+        '<div class="form-grupo"><label class="form-label">Categoría</label><input class="form-input" id="ceCat" list="ceCats" maxlength="40" style="text-transform:uppercase" value="' + S.esc(e.category) + '" placeholder="Elegí o escribí una nueva"><datalist id="ceCats">' + cats.map(c => '<option value="' + S.esc(c) + '">').join('') + '</datalist></div>' +
+        '<div class="form-grupo"><label class="form-label">Precio sugerido (opcional)</label><input class="form-input" id="cePrecio" inputmode="decimal" value="' + (e.price ? String(e.price).replace('.', ',') : '') + '" placeholder="Vacío = lo escribís cada vez"></div>' +
+        (e.nuevo ? '' : '<label class="check"><input type="checkbox" id="ceActivo"' + (e.activo !== false ? ' checked' : '') + '> Visible en la boleta</label><div style="font-size:0.75rem;color:var(--gris);margin:-6px 0 12px;">Ocultarlo no borra los movimientos que ya tiene.</div>') +
+        '<div class="form-error" id="ceError"></div>' +
+        '<button class="btn-guardar" id="ceBtn" onclick="guardarConcepto()">💾 Guardar</button><button class="btn-sec" onclick="catEdit=null;renderCatalogo()">← Volver a la lista</button></div>';
+}
+async function guardarConcepto() {
+    if (enviando) return;
+    const e = catEdit, err = document.getElementById('ceError'), btn = document.getElementById('ceBtn');
+    const nombre = document.getElementById('ceNombre').value.trim().toUpperCase(), cat = document.getElementById('ceCat').value.trim().toUpperCase();
+    const ptxt = document.getElementById('cePrecio').value.trim(), precio = ptxt ? S.leerImporte(ptxt) : '';
+    if (!nombre) { err.textContent = 'Escribí el nombre'; return; }
+    if (!cat) { err.textContent = 'Escribí la categoría'; return; }
+    if (ptxt && (isNaN(precio) || !(precio > 0))) { err.textContent = 'Precio inválido'; return; }
+    enviando = true; btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
+    let r;
+    if (e.nuevo) {
+        if (!opNuevoConcepto) opNuevoConcepto = S.nuevoOpId();
+        r = await S.api('crearConcepto', { opId: opNuevoConcepto, nombre: nombre, categoria: cat, tipo: e.tipo, precio: precio });
+    } else {
+        r = await S.api('editarConcepto', { codigo: e.codigo, nombre: nombre, categoria: cat, precio: precio, activo: document.getElementById('ceActivo').checked });
+    }
+    enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar';
+    if (!r || !r.success) { if (r && r.definitivo) opNuevoConcepto = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
+    opNuevoConcepto = null; catEdit = null;
+    S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde');
+    await cargarEstado(true);
+    renderCatalogo();
+}
+
+// ========== CUENTAS ==========
+let ctaEdit = null, opNuevaCuenta = null;
+const TIPOS_CUENTA = { EFECTIVO: 'Efectivo', BANCO: 'Banco', BILLETERA: 'Billetera virtual', TARJETA: 'Tarjeta', OTRA: 'Otra' };
+function abrirCuentas() { ctaEdit = null; renderCuentas(); abrirModal('modalCuentas'); }
+function renderCuentas() {
+    const cont = document.getElementById('ctaContenido');
+    if (!estado) { cont.innerHTML = '<div class="vacio">Sin conexión.</div>'; return; }
+    if (ctaEdit) { renderFormCuenta(); return; }
+    cont.innerHTML = '<div class="resumen-card"><div class="resumen-stat"><span>Saldo total</span><b>' + S.fmt(estado.total) + '</b></div>' +
+        '<div class="resumen-stat"><span>Gastos del mes</span><b style="color:var(--rojo)">' + S.fmt(estado.mes.gastos) + '</b></div>' +
+        '<div class="resumen-stat"><span>Ingresos del mes</span><b style="color:var(--verde)">' + S.fmt(estado.mes.ingresos) + '</b></div></div>' +
+        cuentas.map(c => '<div class="fila' + (c.activo === false ? ' off' : '') + '" onclick="editarCuenta(\'' + c.codigo + '\')"><div><div class="n">' + S.esc(c.nombre) + '</div><div class="d">' + (TIPOS_CUENTA[c.tipo] || c.tipo) +
+            ' · inicial ' + S.fmt(c.saldoInicial) + '</div></div><b style="' + (c.saldo < 0 ? 'color:var(--rojo)' : '') + '">' + S.fmt(c.saldo) + '</b></div>').join('') +
+        '<div style="padding:12px 16px;"><button class="btn-guardar" onclick="nuevaCuenta()">＋ Nueva cuenta</button>' +
+        '<div style="font-size:0.75rem;color:var(--gris);">El saldo se calcula solo: saldo inicial + ingresos − gastos ± transferencias y deudas. Para que coincida con la realidad, cargá el saldo inicial de cada cuenta.</div></div>';
+}
+function nuevaCuenta() { ctaEdit = { nuevo: true, nombre: '', tipo: 'EFECTIVO', saldoInicial: 0, activo: true }; opNuevaCuenta = null; renderCuentas(); }
+function editarCuenta(cod) { const c = cuentas.find(x => x.codigo === cod); if (c) { ctaEdit = Object.assign({}, c); renderCuentas(); } }
+function renderFormCuenta() {
+    const e = ctaEdit;
+    document.getElementById('ctaContenido').innerHTML = '<div class="form-scroll">' +
+        '<div class="form-grupo"><label class="form-label">Nombre</label><input class="form-input" id="cuNombre" maxlength="40" style="text-transform:uppercase" value="' + S.esc(e.nombre) + '" placeholder="Ej: MERCADO PAGO"></div>' +
+        '<div class="form-grupo"><label class="form-label">Tipo</label><select class="form-input" id="cuTipo">' + Object.keys(TIPOS_CUENTA).map(k => '<option value="' + k + '"' + (k === e.tipo ? ' selected' : '') + '>' + TIPOS_CUENTA[k] + '</option>').join('') + '</select></div>' +
+        '<div class="form-grupo"><label class="form-label">Saldo inicial</label><input class="form-input" id="cuSaldo" inputmode="decimal" value="' + (e.saldoInicial ? String(e.saldoInicial).replace('.', ',') : '') + '" placeholder="0"><div style="font-size:0.72rem;color:var(--gris);margin-top:4px;">Lo que había en la cuenta antes de empezar a usar SEBA BALANCE. Si es negativo, escribí -.</div></div>' +
+        (e.nuevo ? '' : '<label class="check"><input type="checkbox" id="cuActivo"' + (e.activo !== false ? ' checked' : '') + '> Cuenta activa</label>') +
+        '<div class="form-error" id="cuError"></div><button class="btn-guardar" id="cuBtn" onclick="guardarCuenta()">💾 Guardar</button><button class="btn-sec" onclick="ctaEdit=null;renderCuentas()">← Volver</button></div>';
+}
+async function guardarCuenta() {
+    if (enviando) return;
+    const e = ctaEdit, err = document.getElementById('cuError'), btn = document.getElementById('cuBtn');
+    const nombre = document.getElementById('cuNombre').value.trim().toUpperCase(), tipo = document.getElementById('cuTipo').value;
+    let st = document.getElementById('cuSaldo').value.trim(), neg = st.startsWith('-'); if (neg) st = st.slice(1);
+    let saldo = st ? S.leerImporte(st) : 0;
+    if (!nombre) { err.textContent = 'Escribí el nombre'; return; }
+    if (isNaN(saldo) || saldo === null) { err.textContent = 'Saldo inválido'; return; }
+    if (neg) saldo = -saldo;
+    if (!e.nuevo) {
+        const activo = document.getElementById('cuActivo').checked;
+        if (!activo && e.activo !== false && Math.round((e.saldo || 0) * 100) !== 0 && !confirm('La cuenta tiene saldo ' + S.fmt(e.saldo) + '. Si la desactivás, su saldo sigue sumando al total.\n\n¿Desactivar igual?')) return;
+    }
+    enviando = true; btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
+    let r;
+    if (e.nuevo) { if (!opNuevaCuenta) opNuevaCuenta = S.nuevoOpId(); r = await S.api('crearCuenta', { opId: opNuevaCuenta, nombre: nombre, tipo: tipo, saldoInicial: saldo }); }
+    else r = await S.api('editarCuenta', { codigo: e.codigo, nombre: nombre, tipo: tipo, saldoInicial: saldo, activo: document.getElementById('cuActivo').checked });
+    enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar';
+    if (!r || !r.success) { if (r && r.definitivo) opNuevaCuenta = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
+    opNuevaCuenta = null; ctaEdit = null;
+    S.toast('✅ Guardado', 'verde');
+    await cargarEstado(true);
+    renderCuentas();
+}
+
+// ========== INICIO ==========
+renderTodo();
+verificarSesion();
+</script>
+</body>
+</html>
