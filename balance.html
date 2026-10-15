@@ -95,6 +95,20 @@ button { font-family:inherit; }
 .tarjeta .c { font-size:0.62rem; color:var(--gris); text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tarjeta .p { font-size:0.78rem; font-weight:700; color:var(--lavanda-dark); margin-top:2px; }
 
+/* ===== NAVEGACIÓN POR PASOS (categoría → gasto → rubro → producto) ===== */
+.migas { display:flex; align-items:center; gap:6px; padding:8px 12px 2px; flex-wrap:wrap; font-size:0.72rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px; }
+.migas a { color:var(--lavanda-dark); cursor:pointer; text-decoration:underline dotted; }
+.migas .volver { border:none; background:var(--lavanda-light); color:var(--lavanda-dark); border-radius:14px; padding:4px 10px; font-weight:900; font-size:0.74rem; cursor:pointer; margin-right:2px; text-transform:none; letter-spacing:0; }
+.sec-tit { padding:8px 14px 0; font-size:0.66rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:1px; }
+.tarjeta { position:relative; }
+.tarjeta.cat { border-left-color:var(--naranja); }
+.tarjeta.art { border-left-color:#7e57c2; }
+.tarjeta.nuevo { border:2px dashed var(--lavanda-light); border-left:2px dashed var(--lavanda-light); background:var(--lavanda-pale); }
+.tarjeta.solo { border-left-color:var(--gris); }
+.tarjeta .flecha { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--lavanda); font-weight:900; }
+.tarjeta .n.conflecha, .tarjeta .c.conflecha { padding-right:14px; }
+#listaTodosWrap { max-height:46vh; }
+
 /* ===== TOTAL ===== */
 .total-bar { background:linear-gradient(135deg,#0A2472,var(--lavanda)); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:10px; }
 .total-label { color:rgba(255,255,255,.8); font-size:0.74rem; font-weight:500; text-transform:uppercase; letter-spacing:1px; }
@@ -237,7 +251,7 @@ button { font-family:inherit; }
 </div>
 <div id="listaTodosWrap">
     <div style="padding:8px 14px;border-bottom:1px solid var(--lavanda-light);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:0.72rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:1px;" id="listaTodosTitulo">Todos los gastos</span>
+        <span style="font-size:0.72rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:1px;" id="listaTodosTitulo">Agregar a la boleta</span>
         <button onclick="toggleListaTodos()" style="border:none;background:none;font-size:1rem;cursor:pointer;color:var(--gris);">✕</button>
     </div>
     <div id="listaTodosItems"></div>
@@ -332,6 +346,26 @@ button { font-family:inherit; }
     </div>
 </div>
 
+<!-- ===== MODAL PRODUCTO NUEVO ===== -->
+<div class="modal-bg" id="modalProd" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header"><span class="modal-titulo">＋ Producto nuevo</span><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-body"><div class="form-scroll">
+            <div class="ayuda" style="font-size:0.78rem;color:var(--gris);background:var(--lavanda-pale);border-radius:10px;padding:8px 10px;margin-bottom:12px;">Lo vas a ver solo vos. Si sirve para todos, VAO Sistemas lo pasa a la lista común.</div>
+            <div class="form-grupo"><label class="form-label">Lista</label><input class="form-input" id="npLista" disabled></div>
+            <div class="form-grupo"><label class="form-label">Rubro</label><input class="form-input" id="npRubro" list="npRubros" maxlength="40" style="text-transform:uppercase" placeholder="Ej: ALMACÉN"><datalist id="npRubros"></datalist></div>
+            <div class="form-grupo"><label class="form-label">Producto</label><input class="form-input" id="npNombre" maxlength="60" style="text-transform:uppercase" placeholder="Ej: ALFAJOR TRIPLE"></div>
+            <div style="display:flex;gap:8px;">
+                <div class="form-grupo" style="flex:1;min-width:0;"><label class="form-label">Marca</label><input class="form-input" id="npMarca" maxlength="40" style="text-transform:uppercase" placeholder="Opcional"></div>
+                <div class="form-grupo" style="flex:1;min-width:0;"><label class="form-label">Peso / tamaño</label><input class="form-input" id="npPres" maxlength="30" style="text-transform:uppercase" placeholder="500 G · 1 L · X 6"></div>
+            </div>
+            <div class="form-error" id="npError"></div>
+            <button class="btn-guardar" id="npBtn" onclick="guardarProducto()">💾 Guardar y agregar a la boleta</button>
+        </div></div>
+    </div>
+</div>
+
 <!-- ===== MODAL CUENTAS ===== -->
 <div class="modal-bg" id="modalCuentas" onclick="if(event.target===this)cerrarModal()">
     <div class="modal-sheet">
@@ -344,7 +378,7 @@ button { font-family:inherit; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 2;
+window.APP_VERSION = 3;
 window.SEBA_BADGE_BOTTOM = 84;
 const S = window.SEBA;
 const PREFIJO = S.prefijo;
@@ -357,6 +391,7 @@ const K_CACHE  = 'seba_catalogo_' + PREFIJO;        // solo catálogo y nombres 
 
 let estado = null;
 let productos = [];
+let articulos = [];   // productos de las listas (común + propios), con el último precio que pagó este cliente
 let cuentas = [];
 let boleta = S.ls.get(K_BOLETA) || { tipo: 'GASTO', items: [] };
 if (!boleta.items) boleta = { tipo: 'GASTO', items: [] };
@@ -419,7 +454,7 @@ async function verificarSesion() {
 
 // ========== DATOS ==========
 function aplicarCache(c) {
-    productos = c.productos || []; cuentas = c.cuentas || [];
+    productos = c.productos || []; cuentas = c.cuentas || []; articulos = c.articulos || [];
     if (c.nombre) document.getElementById('headerTitulo').textContent = c.nombre;
     renderTodo();
 }
@@ -438,7 +473,8 @@ async function cargarEstado(silencioso) {
     estado = r;
     productos = r.productos || [];
     cuentas = r.cuentas || [];
-    S.ls.set(K_CACHE, { nombre: r.nombre, productos: productos, cuentas: cuentas.map(c => ({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, activo: c.activo, orden: c.orden })) });
+    articulos = r.articulos || [];
+    S.ls.set(K_CACHE, { nombre: r.nombre, productos: productos, articulos: articulos, cuentas: cuentas.map(c => ({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, activo: c.activo, orden: c.orden })) });
     if (r.nombre) { document.getElementById('headerTitulo').textContent = r.nombre; document.title = r.nombre + ' · SEBA BALANCE'; }
     ind.className = 'indicador-carga ok'; ind.title = productos.length + ' conceptos';
     if (r.avisos && r.avisos.length) console.warn('Avisos del servidor:', r.avisos);
@@ -446,6 +482,8 @@ async function cargarEstado(silencioso) {
     return true;
 }
 function renderTodo() { renderModo(); renderFranja(); renderBoleta(); if (listaAbierta) renderListaTodos(); }
+// Al cambiar GASTOS/INGRESOS se vuelve al primer paso.
+function navInicio() { nav = { nivel: 'cats' }; }
 
 function renderFranja() {
     const act = cuentas.filter(c => c.activo !== false);
@@ -473,14 +511,14 @@ function cambiarTipo(t) {
     if (boletaBloqueada()) return;
     if (boleta.items.length && !confirm('La boleta tiene ' + boleta.items.length + ' renglón(es) de ' + (boleta.tipo === 'GASTO' ? 'gasto' : 'ingreso') + '.\n\n¿Vaciarla y pasar a ' + (t === 'GASTO' ? 'gastos' : 'ingresos') + '?')) return;
     boleta = { tipo: t, items: [] };
-    guardarBoleta(); renderTodo();
+    navInicio(); guardarBoleta(); renderTodo();
 }
 function renderModo() {
     const g = boleta.tipo === 'GASTO';
     document.getElementById('modoG').classList.toggle('on', g);
     document.getElementById('modoI').classList.toggle('on', !g);
     document.getElementById('buscadorInput').placeholder = g ? '🔍 Buscar gasto...' : '🔍 Buscar ingreso...';
-    document.getElementById('listaTodosTitulo').textContent = g ? 'Todos los gastos' : 'Todos los ingresos';
+    document.getElementById('listaTodosTitulo').textContent = g ? 'Agregar gasto' : 'Agregar ingreso';
     document.getElementById('totalLabel').textContent = g ? 'Total gasto' : 'Total ingreso';
 }
 function delTipo() { return productos.filter(p => p.tipo === boleta.tipo); }
@@ -525,8 +563,9 @@ function score(nombre, terminos) {
 function resultadosBusqueda(q) {
     const n = normalizar(q); if (!n) return [];
     const ts = expandir(n);
-    return delTipo().map(p => ({ p, s: score(normalizar(p.name), ts) * 2 + score(normalizar(p.category), ts) }))
-        .filter(x => x.s > 0).sort((a, b) => b.s - a.s || (b.p.uso || 0) - (a.p.uso || 0)).map(x => x.p).slice(0, 15);
+    const con = delTipo().map(p => ({ p, s: score(normalizar(p.name), ts) * 2 + score(normalizar(p.category), ts) + 5, u: p.uso || 0 }));
+    const art = articulosDelTipo().map(a => ({ a, s: score(normalizar(a.name), ts) * 2 + score(normalizar(a.marca + ' ' + a.rubro), ts), u: a.uso || 0 }));
+    return con.concat(art).filter(x => x.s > 0).sort((a, b) => b.s - a.s || b.u - a.u).slice(0, 20);
 }
 let _bt;
 function buscar() {
@@ -535,9 +574,14 @@ function buscar() {
         const q = document.getElementById('buscadorInput').value.trim(), div = document.getElementById('buscadorResultados');
         if (!q) { div.style.display = 'none'; return; }
         const m = resultadosBusqueda(q);
-        div.innerHTML = m.length ? m.map(p => '<div class="resultado-item" onclick="agregar(\'' + p.codigo + '\')"><div style="min-width:0;"><div style="font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + S.esc(p.name) +
-            '</div><div style="font-size:0.7rem;color:var(--gris);">' + S.esc(p.category) + '</div></div><div style="font-weight:900;color:var(--lavanda-dark);margin-left:10px;white-space:nowrap;">' + (p.price ? S.fmt(p.price) : '') + '</div></div>').join('')
-            : '<div style="padding:12px 16px;color:#aaa;font-size:0.85rem;">Sin resultados para <b>' + S.esc(q) + '</b>. Podés crearlo en 📚 Catálogo.</div>';
+        div.innerHTML = m.length ? m.map(x => {
+            const p = x.p, a = x.a;
+            const clic = p ? 'agregar(\'' + p.codigo + '\')' : 'agregarArt(\'' + a.id + '\')';
+            const tit = p ? p.name : a.name, sub = p ? p.category + (p.lista ? ' · tiene lista de productos' : '') : [a.marca, a.pres].filter(Boolean).join(' · ') + ' · ' + a.lista + ' › ' + a.rubro;
+            const pr = p ? (p.price || p.ultimo) : a.ultimo;
+            return '<div class="resultado-item"' + (a ? ' style="border-left-color:#7e57c2"' : '') + ' onclick="' + clic + '"><div style="min-width:0;"><div style="font-weight:700;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + S.esc(tit) +
+                '</div><div style="font-size:0.7rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + S.esc(sub) + '</div></div><div style="font-weight:900;color:var(--lavanda-dark);margin-left:10px;white-space:nowrap;">' + (pr ? S.fmt(pr) : '') + '</div></div>';
+        }).join('') : '<div style="padding:12px 16px;color:#aaa;font-size:0.85rem;">Sin resultados para <b>' + S.esc(q) + '</b>. Podés crearlo en 📚 Catálogo.</div>';
         div.style.display = 'block';
     }, 80);
 }
@@ -545,6 +589,7 @@ document.addEventListener('click', e => { if (!e.target.closest('.buscador-wrap'
 
 let listaAbierta = false;
 function toggleListaTodos() {
+    if (!listaAbierta && !itemsActuales().length) { ir({ nivel: 'cats' }); return; }
     listaAbierta = !listaAbierta;
     document.getElementById('listaTodosWrap').style.display = listaAbierta ? 'block' : 'none';
     const b = document.getElementById('btnHamburguesa');
@@ -557,11 +602,94 @@ function porCategoria(lista) {
     lista.forEach(p => { (cats[p.category] = cats[p.category] || []).push(p); ordenCat[p.category] = Math.min(ordenCat[p.category] || 9999, p.orden || 99); });
     return Object.keys(cats).sort((a, b) => ordenCat[a] - ordenCat[b] || a.localeCompare(b)).map(c => ({ cat: c, items: cats[c].sort((a, b) => (a.orden || 99) - (b.orden || 99)) }));
 }
-function renderListaTodos() {
-    const g = porCategoria(delTipo());
-    document.getElementById('listaTodosItems').innerHTML = g.length ? g.map(x => '<div class="lt-cat">' + S.esc(x.cat) + '</div>' + x.items.map(p =>
-        '<div class="lt-item" onclick="agregar(\'' + p.codigo + '\')"><div style="font-size:0.88rem;font-weight:600;min-width:0;">' + S.esc(p.name) + '</div><div style="font-weight:700;color:var(--lavanda);white-space:nowrap;">' + (p.price ? S.fmt(p.price) : '＋') + '</div></div>').join('')).join('')
-        : '<div class="vacio">Sin conceptos. Crealos en 📚 Catálogo.</div>';
+function renderListaTodos() { document.getElementById('listaTodosItems').innerHTML = htmlNav(); }
+
+// ========== NAVEGACIÓN POR PASOS (como el POS en profundidad) ==========
+// Paso 1: CATEGORÍAS → Paso 2: GASTOS de la categoría → Paso 3: RUBROS de su lista → Paso 4: PRODUCTOS
+let nav = { nivel: 'cats' };
+function listaDe(p) { const l = String(p && p.lista || ''); const i = l.indexOf('/'); return i < 0 ? { lista: l, rubro: '' } : { lista: l.slice(0, i), rubro: l.slice(i + 1) }; }
+function articulosDelTipo() {
+    if (boleta.tipo !== 'GASTO') return [];
+    const listas = new Set(delTipo().filter(p => p.lista).map(p => listaDe(p).lista));
+    return articulos.filter(a => listas.has(a.lista));
+}
+// Qué gasto usa un producto: el que abre exactamente su lista/rubro, si no el de su lista (el más usado).
+function conceptoParaArt(a) {
+    const cands = delTipo().filter(p => p.lista && listaDe(p).lista === a.lista);
+    if (nav.codigo && cands.some(p => p.codigo === nav.codigo)) return productos.find(p => p.codigo === nav.codigo);
+    return cands.find(p => listaDe(p).rubro === a.rubro) || cands.filter(p => !listaDe(p).rubro).sort((x, y) => (y.uso || 0) - (x.uso || 0))[0] || cands[0] || null;
+}
+function ir(n) { nav = n; renderNavDonde(); const w = document.getElementById(listaAbierta ? 'listaTodosWrap' : 'listaVenta'); if (w) w.scrollTop = 0; }
+function renderNavDonde() { if (listaAbierta) renderListaTodos(); if (!itemsActuales().length) renderBoleta(); }
+function itemsActuales() { const c = enCurso(); return c ? c.items : boleta.items; }
+function tarjetaHTML(clase, clic, n, c, p, flecha) {
+    return '<div class="tarjeta ' + clase + '" onclick="' + clic + '"><div class="n' + (flecha ? ' conflecha' : '') + '">' + S.esc(n) + '</div>' + (c ? '<div class="c' + (flecha ? ' conflecha' : '') + '">' + S.esc(c) + '</div>' : '') +
+        (p ? '<div class="p">' + p + '</div>' : '') + (flecha ? '<span class="flecha">›</span>' : '') + '</div>';
+}
+function precioTxt(v, ult) { return v ? S.fmt(v) : (ult ? 'último ' + S.fmt(ult) : ''); }
+function htmlMigas() {
+    if (nav.nivel === 'cats') return '';
+    const p = nav.codigo ? productos.find(x => x.codigo === nav.codigo) : null;
+    const m = ['<button class="volver" onclick="navAtras()">‹ Volver</button><a onclick="ir({nivel:\'cats\'})">' + (boleta.tipo === 'GASTO' ? 'Gastos' : 'Ingresos') + '</a>'];
+    if (nav.cat) m.push('<a onclick="ir({nivel:\'gastos\',cat:nav.cat})">' + S.esc(nav.cat) + '</a>');
+    if (p) m.push(nav.nivel === 'rubros' ? '<span>' + S.esc(p.name) + '</span>' : '<a onclick="abrirLista(\'' + p.codigo + '\',true)">' + S.esc(p.name) + '</a>');
+    if (nav.nivel === 'prods') m.push('<span>' + S.esc(nav.rubro) + '</span>');
+    return '<div class="migas">' + m.join(' › ') + '</div>';
+}
+function navAtras() {
+    if (nav.nivel === 'prods') { const p = productos.find(x => x.codigo === nav.codigo); if (p && !listaDe(p).rubro) return ir({ nivel: 'rubros', cat: nav.cat, codigo: nav.codigo }); return ir({ nivel: 'gastos', cat: nav.cat }); }
+    if (nav.nivel === 'rubros') return ir({ nivel: 'gastos', cat: nav.cat });
+    ir({ nivel: 'cats' });
+}
+let _navCats = [], _navRubros = [];
+function abrirCat(cat) { ir({ nivel: 'gastos', cat: cat }); }
+function abrirCatN(i) { if (_navCats[i]) abrirCat(_navCats[i]); }
+function irRubroN(i) { if (_navRubros[i]) ir({ nivel: 'prods', cat: nav.cat, codigo: nav.codigo, rubro: _navRubros[i] }); }
+function abrirLista(codigo, aRubros) {
+    const p = productos.find(x => x.codigo === codigo); if (!p) return;
+    const l = listaDe(p);
+    if (l.rubro && !aRubros) ir({ nivel: 'prods', cat: p.category, codigo: codigo, rubro: l.rubro });
+    else ir({ nivel: 'rubros', cat: p.category, codigo: codigo });
+}
+function htmlNav() {
+    if (!productos.length) return '<div class="vacio-txt">Cargando catálogo...</div>';
+    let h = htmlMigas();
+    const tipo = boleta.tipo;
+    if (nav.nivel === 'cats') {
+        const usados = delTipo().filter(p => p.uso).sort((x, y) => y.uso - x.uso).slice(0, 6);
+        const compras = articulosDelTipo().filter(a => a.uso).sort((x, y) => y.uso - x.uso).slice(0, 4);
+        if (usados.length) h += '<div class="sec-tit">Más usados</div><div class="tarjetas">' + usados.map(p => tarjetaHTML(tipo === 'INGRESO' ? 'i' : '', 'agregar(\'' + p.codigo + '\')', p.name, p.category, precioTxt(p.price, p.ultimo))).join('') + '</div>';
+        if (compras.length) h += '<div class="sec-tit">Productos que más comprás</div><div class="tarjetas">' + compras.map(a => tarjetaHTML('art', 'agregarArt(\'' + a.id + '\')', a.name, [a.marca, a.pres].filter(Boolean).join(' · '), precioTxt(null, a.ultimo))).join('') + '</div>';
+        const g = porCategoria(delTipo());
+        _navCats = g.map(x => x.cat);
+        h += '<div class="sec-tit">' + (tipo === 'GASTO' ? 'Categorías de gastos' : 'Categorías de ingresos') + '</div><div class="tarjetas">' +
+            g.map((x, i) => tarjetaHTML('cat', 'abrirCatN(' + i + ')', x.cat, x.items.length + (x.items.length === 1 ? ' opción' : ' opciones'), '', true)).join('') + '</div>';
+        return h;
+    }
+    if (nav.nivel === 'gastos') {
+        const items = delTipo().filter(p => p.category === nav.cat).sort((a, b) => (a.orden || 99) - (b.orden || 99));
+        if (!items.length) { nav = { nivel: 'cats' }; return htmlNav(); }
+        return h + '<div class="tarjetas">' + items.map(p => p.lista && articulos.some(a => a.lista === listaDe(p).lista)
+            ? tarjetaHTML('', 'abrirLista(\'' + p.codigo + '\')', p.name, 'lista de productos', precioTxt(p.price, p.ultimo), true)
+            : tarjetaHTML(tipo === 'INGRESO' ? 'i' : '', 'agregar(\'' + p.codigo + '\')', p.name, '', precioTxt(p.price, p.ultimo))).join('') + '</div>';
+    }
+    const p = productos.find(x => x.codigo === nav.codigo);
+    if (!p) { nav = { nivel: 'cats' }; return htmlNav(); }
+    const l = listaDe(p), arts = articulos.filter(a => a.lista === l.lista);
+    if (nav.nivel === 'rubros') {
+        const rub = {}; arts.forEach(a => { rub[a.rubro] = rub[a.rubro] || { n: 0, o: a.orden }; rub[a.rubro].n++; rub[a.rubro].o = Math.min(rub[a.rubro].o, a.orden); });
+        const top = arts.filter(a => a.uso).sort((x, y) => y.uso - x.uso).slice(0, 4);
+        return h + '<div class="tarjetas">' + tarjetaHTML('solo', 'agregar(\'' + p.codigo + '\')', p.name, 'sin detallar · solo el total', precioTxt(p.price, p.ultimo)) +
+            tarjetaHTML('nuevo', 'nuevoProducto(\'' + p.codigo + '\',false)', '＋ Producto nuevo', 'en ' + l.lista) + '</div>' +
+            (top.length ? '<div class="sec-tit">Lo que más comprás</div><div class="tarjetas">' + top.map(a => tarjetaHTML('art', 'agregarArt(\'' + a.id + '\')', a.name, [a.marca, a.pres].filter(Boolean).join(' · '), precioTxt(null, a.ultimo))).join('') + '</div>' : '') +
+            '<div class="sec-tit">Rubros de ' + S.esc(l.lista) + '</div><div class="tarjetas">' + (_navRubros = Object.keys(rub).sort((a, b) => rub[a].o - rub[b].o)).map((r, i) => tarjetaHTML('cat', 'irRubroN(' + i + ')', r, rub[r].n + ' productos', '', true)).join('') + '</div>';
+    }
+    const lista = arts.filter(a => a.rubro === nav.rubro).sort((x, y) => (y.uso || 0) - (x.uso || 0) || x.orden - y.orden);
+    // Si el gasto abre directo un rubro (ej. CARNICERÍA → SUPERMERCADO/CARNES), acá también se puede cargar sin detallar.
+    const sinDetalle = l.rubro ? tarjetaHTML('solo', 'agregar(\'' + p.codigo + '\')', p.name, 'sin detallar · solo el total', precioTxt(p.price, p.ultimo)) : '';
+    return h + '<div class="tarjetas">' + sinDetalle + lista.map(a => tarjetaHTML('art', 'agregarArt(\'' + a.id + '\')', a.name, [a.marca, a.pres].filter(Boolean).join(' · ') + (a.propio ? ' · mío' : ''), precioTxt(null, a.ultimo))).join('') +
+        tarjetaHTML('nuevo', 'nuevoProducto(\'' + p.codigo + '\',true)', '＋ Producto nuevo', 'en ' + nav.rubro) +
+        (l.rubro ? '' : '') + '</div>' + (lista.length ? '' : '<div class="vacio-txt">Todavía no hay productos en este rubro.</div>');
 }
 
 // ========== BOLETA ==========
@@ -580,12 +708,34 @@ function agregar(codigo) {
     document.getElementById('buscadorInput').value = '';
     document.getElementById('buscadorResultados').style.display = 'none';
     if (boleta.items.length >= 60) { S.toast('Máximo 60 renglones por boleta', 'rojo'); return; }
+    // Precio fijo del catálogo → directo. Si no, se pregunta con el ÚLTIMO importe ya escrito.
     let imp = p.price || null;
-    if (!imp) { const n = pedirImporte(p.name, ''); if (n !== undefined) imp = n; }
-    boleta.items.push({ uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), codigo: p.codigo, name: p.name, category: p.category, importe: imp, descripcion: '' });
-    guardarBoleta(); renderBoleta();
+    if (!imp) { const n = pedirImporte(p.name, p.ultimo || ''); if (n !== undefined) imp = n; }
+    boleta.items.push({ uid: nuevoUid(), codigo: p.codigo, name: p.name, category: p.category, importe: imp, descripcion: '' });
+    guardarBoleta(); navInicio(); renderBoleta();
     if (listaAbierta) toggleListaTodos();
     S.toast('✅ ' + p.name.substring(0, 28), 'verde', 1400);
+}
+function nuevoUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+// Producto de una lista: queda en la boleta con su nombre/marca/presentación y el último precio que pagaste.
+function agregarArt(id) {
+    if (boletaBloqueada()) return;
+    const a = articulos.find(x => x.id === id); if (!a) return;
+    const p = conceptoParaArt(a);
+    if (!p) { S.toast('Ningún gasto abre la lista ' + a.lista + '. Asignala en 📚 Catálogo.', 'rojo', 3500); return; }
+    document.getElementById('buscadorInput').value = '';
+    document.getElementById('buscadorResultados').style.display = 'none';
+    if (boleta.items.length >= 60) { S.toast('Máximo 60 renglones por boleta', 'rojo'); return; }
+    const etiqueta = [a.name, a.marca, a.pres].filter(Boolean).join(' · ');
+    let imp = null; const n = pedirImporte(etiqueta, a.ultimo || ''); if (n !== undefined) imp = n;
+    const estabaVacia = !boleta.items.length;
+    boleta.items.push({ uid: nuevoUid(), codigo: p.codigo, name: etiqueta, category: p.name, importe: imp, descripcion: '', productoId: a.id });
+    guardarBoleta();
+    // Comprando varios productos: la lista queda abierta en el mismo rubro para seguir agregando.
+    if (nav.nivel !== 'prods' && nav.nivel !== 'rubros') nav = { nivel: 'prods', cat: p.category, codigo: p.codigo, rubro: a.rubro };
+    if (estabaVacia && !listaAbierta) toggleListaTodos();
+    renderBoleta(); if (listaAbierta) renderListaTodos();
+    S.toast('✅ ' + etiqueta.substring(0, 32), 'verde', 1400);
 }
 function editarImporte(uid) {
     if (boletaBloqueada()) return;
@@ -612,7 +762,7 @@ function limpiarBoleta() {
         S.toast('🗑 Boleta en curso descartada', 'rojo'); return;
     }
     if (boleta.items.length && !confirm('¿Limpiar la boleta actual?')) return;
-    boleta = { tipo: boleta.tipo, items: [] }; guardarBoleta(); renderBoleta();
+    boleta = { tipo: boleta.tipo, items: [] }; navInicio(); guardarBoleta(); renderBoleta();
 }
 function totalBoleta(items) { return S.suma(items, i => i.importe || 0); }
 function renderBoleta() {
@@ -623,10 +773,8 @@ function renderBoleta() {
         (items.length ? ' · ' + items.length : '') + (c ? ' <span class="pend">· enviada sin confirmar</span>' : '');
     const lista = document.getElementById('listaVenta');
     if (!items.length) {
-        const top = delTipo().slice().sort((a, b) => (b.uso || 0) - (a.uso || 0) || (a.orden || 99) - (b.orden || 99)).slice(0, 8);
-        lista.innerHTML = '<div class="vacio-txt">' + (productos.length ? 'Tocá una tarjeta o buscá ' + (boleta.tipo === 'GASTO' ? 'un gasto' : 'un ingreso') + ' para empezar' : 'Cargando catálogo...') + '</div>' +
-            '<div class="tarjetas">' + top.map(p => '<div class="tarjeta' + (p.tipo === 'INGRESO' ? ' i' : '') + '" onclick="agregar(\'' + p.codigo + '\')"><div class="n">' + S.esc(p.name) + '</div><div class="c">' + S.esc(p.category) + '</div>' +
-            (p.price ? '<div class="p">' + S.fmt(p.price) + '</div>' : '') + '</div>').join('') + '</div>';
+        if (listaAbierta) toggleListaTodos();
+        lista.innerHTML = htmlNav();
         return;
     }
     lista.innerHTML = items.map(it =>
@@ -711,7 +859,7 @@ async function confirmarBoleta() {
     }
     enviando = true; btn.disabled = true; btn.textContent = '⏳ Registrando...';
     const r = await S.api('registrarBoleta', { movId: c.movId, tipo: c.tipo, fecha: c.fecha, cuenta: c.cuenta,
-        items: c.items.map(i => ({ codigo: i.codigo, importe: i.importe, descripcion: i.descripcion || '' })) });
+        items: c.items.map(i => ({ codigo: i.codigo, importe: i.importe, descripcion: i.descripcion || '', productoId: i.productoId || '' })) });
     enviando = false; btn.disabled = false; btn.textContent = '✅ Registrar';
     if (r && r.success === false && r.definitivo) {
         // Rechazo seguro: el servidor NO escribió nada → la boleta vuelve a ser editable.
@@ -732,7 +880,7 @@ async function confirmarBoleta() {
     }
     // Éxito (nueva o ya existente)
     S.ls.del(K_CURSO);
-    boleta = { tipo: c.tipo, items: [] }; guardarBoleta();
+    boleta = { tipo: c.tipo, items: [] }; guardarBoleta(); navInicio();
     confirmHecho = true;
     document.getElementById('avisoCurso').style.display = 'none';
     document.getElementById('confirmCampos').style.display = 'none';
@@ -772,6 +920,7 @@ function reabrirBorrador() {
     if (S.ls.get(pre + 'transferencia') && !S.ls.get(K_TRANSF)) abrirTransferir();
     else if (S.ls.get(pre + 'concepto_nuevo_GASTO') || S.ls.get(pre + 'concepto_nuevo_INGRESO')) abrirCatalogo();
     else if (S.ls.get(pre + 'cuenta_nueva')) abrirCuentas();
+    else { const g = S.ls.get(pre + 'producto_nuevo'); if (g && g.extra && productos.some(p => p.codigo === g.extra.codigo)) nuevoProducto(g.extra.codigo, false); }
 }
 
 // ========== HOY ==========
@@ -904,6 +1053,7 @@ function renderFormConcepto() {
     document.getElementById('catContenido').innerHTML = '<div class="form-scroll">' +
         '<div class="form-grupo"><label class="form-label">' + (e.tipo === 'GASTO' ? 'Gasto' : 'Ingreso') + '</label><input class="form-input" id="ceNombre" maxlength="45" style="text-transform:uppercase" value="' + S.esc(e.name) + '" placeholder="Ej: KIOSCO"></div>' +
         '<div class="form-grupo"><label class="form-label">Categoría</label><input class="form-input" id="ceCat" list="ceCats" maxlength="40" style="text-transform:uppercase" value="' + S.esc(e.category) + '" placeholder="Elegí o escribí una nueva"><datalist id="ceCats">' + cats.map(c => '<option value="' + S.esc(c) + '">').join('') + '</datalist></div>' +
+        (e.tipo === 'GASTO' ? '<div class="form-grupo"><label class="form-label">Lista de productos (opcional)</label><input class="form-input" id="ceLista" list="ceListas" maxlength="60" style="text-transform:uppercase" value="' + S.esc(e.lista || '') + '" placeholder="Ej: SUPERMERCADO o SUPERMERCADO/LIMPIEZA"><datalist id="ceListas">' + [...new Set(articulos.map(a => a.lista).concat(articulos.map(a => a.lista + '/' + a.rubro)))].sort().map(x => '<option value="' + S.esc(x) + '">').join('') + '</datalist><div style="font-size:0.72rem;color:var(--gris);margin-top:4px;">Al tocar este gasto se abre esa lista para elegir productos. Vacío = solo importe.</div></div>' : '') +
         '<div class="form-grupo"><label class="form-label">Precio sugerido (opcional)</label><input class="form-input" id="cePrecio" inputmode="decimal" value="' + (e.price ? String(e.price).replace('.', ',') : '') + '" placeholder="Vacío = lo escribís cada vez"></div>' +
         (e.nuevo ? '' : '<label class="check"><input type="checkbox" id="ceActivo"' + (e.activo !== false ? ' checked' : '') + '> Visible en la boleta</label><div style="font-size:0.75rem;color:var(--gris);margin:-6px 0 12px;">Ocultarlo no borra los movimientos que ya tiene.</div>') +
         '<div class="form-error" id="ceError"></div>' +
@@ -911,6 +1061,7 @@ function renderFormConcepto() {
     borrCon = S.borrador('concepto_' + (e.nuevo ? 'nuevo_' + e.tipo : e.codigo), '#catContenido', { extra: () => ({ op: opNuevoConcepto }), alRestaurar: x => { if (e.nuevo && x.op) opNuevoConcepto = x.op; } });
     if (borrCon.restaurar()) S.toast('📝 Recuperé lo que estabas escribiendo', 'verde');
 }
+function listaForm() { const x = document.getElementById('ceLista'); return x ? x.value.trim().toUpperCase().replace(/\s*\/\s*/g, '/') : ''; }
 async function guardarConcepto() {
     if (enviando) return;
     const e = catEdit, err = document.getElementById('ceError'), btn = document.getElementById('ceBtn');
@@ -923,9 +1074,11 @@ async function guardarConcepto() {
     let r;
     if (e.nuevo) {
         if (!opNuevoConcepto) { opNuevoConcepto = S.nuevoOpId(); if (borrCon) borrCon.guardar(); }
-        r = await S.api('crearConcepto', { opId: opNuevoConcepto, nombre: nombre, categoria: cat, tipo: e.tipo, precio: precio });
+        r = await S.api('crearConcepto', { opId: opNuevoConcepto, nombre: nombre, categoria: cat, tipo: e.tipo, precio: precio, lista: listaForm() });
     } else {
-        r = await S.api('editarConcepto', { codigo: e.codigo, nombre: nombre, categoria: cat, precio: precio, activo: document.getElementById('ceActivo').checked });
+        const dEd = { codigo: e.codigo, nombre: nombre, categoria: cat, precio: precio, activo: document.getElementById('ceActivo').checked };
+        if (document.getElementById('ceLista') && listaForm() !== (e.lista || '')) dEd.lista = listaForm();
+        r = await S.api('editarConcepto', dEd);
     }
     enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar';
     if (!r || !r.success) { if (r && r.definitivo) opNuevoConcepto = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
@@ -933,6 +1086,48 @@ async function guardarConcepto() {
     S.toast(r.yaExistia ? '✅ Ya estaba creado' : '✅ Guardado', 'verde');
     await cargarEstado(true);
     renderCatalogo();
+}
+
+// ========== PRODUCTO NUEVO (propio del cliente) ==========
+let np = null, borrProd = null;
+function nuevoProducto(codigo, conRubro) {
+    if (boletaBloqueada()) return;
+    const p = productos.find(x => x.codigo === codigo); if (!p) return;
+    if (!estado) { S.toast('Sin conexión: los productos nuevos se crean con internet', 'rojo'); return; }
+    const l = listaDe(p);
+    np = { codigo, lista: l.lista, op: null };
+    document.getElementById('npLista').value = l.lista;
+    document.getElementById('npRubro').value = conRubro ? nav.rubro : (l.rubro || '');
+    ['npNombre', 'npMarca', 'npPres'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('npRubros').innerHTML = [...new Set(articulos.filter(a => a.lista === l.lista).map(a => a.rubro))].map(r => '<option value="' + S.esc(r) + '">').join('');
+    document.getElementById('npError').textContent = '';
+    borrProd = S.borrador('producto_nuevo', '#modalProd', { extra: () => np, alRestaurar: x => { if (x.codigo === codigo) np = x; } });
+    const g = S.ls.get('seba_borrador_' + PREFIJO + '_producto_nuevo');
+    if (g && g.extra && g.extra.codigo === codigo && borrProd.restaurar()) S.toast('📝 Recuperé el producto que estabas cargando', 'verde');
+    abrirModal('modalProd');
+    setTimeout(() => document.getElementById(document.getElementById('npRubro').value ? 'npNombre' : 'npRubro').focus(), 250);
+}
+async function guardarProducto() {
+    if (enviando || !np) return;
+    const err = document.getElementById('npError'), btn = document.getElementById('npBtn');
+    const v = id => document.getElementById(id).value.trim().toUpperCase();
+    if (!v('npNombre')) { err.textContent = 'Escribí el producto'; return; }
+    if (!np.op) { np.op = S.nuevoOpId(); if (borrProd) borrProd.guardar(); }
+    enviando = true; btn.disabled = true; btn.textContent = '⏳ Guardando...'; err.textContent = '';
+    const r = await S.api('crearProducto', { opId: np.op, lista: np.lista, rubro: v('npRubro'), nombre: v('npNombre'), marca: v('npMarca'), presentacion: v('npPres') });
+    enviando = false; btn.disabled = false; btn.textContent = '💾 Guardar y agregar a la boleta';
+    if (r && r.definitivo && r.id) {
+        np.op = null;
+        if (confirm(r.error + '\n\n¿Agregar ese a la boleta?')) { if (borrProd) borrProd.borrar(); cerrarModal(); agregarArt(r.id); }
+        return;
+    }
+    if (!r || !r.success) { if (r && r.definitivo) np.op = null; err.textContent = S.motivo(r, 'Tocá Guardar de nuevo (no se duplica).'); return; }
+    if (borrProd) { borrProd.borrar(); borrProd = null; }
+    const codigo = np.codigo; np = null;
+    cerrarModal();
+    await cargarEstado(true);
+    nav.codigo = codigo;
+    agregarArt(r.id);
 }
 
 // ========== CUENTAS ==========

@@ -165,8 +165,9 @@
   function css() {
     if (document.getElementById('sbBugCss')) return;
     var st = document.createElement('style'); st.id = 'sbBugCss';
-    st.textContent = '.sb-bg{position:fixed;inset:0;background:rgba(17,24,39,.6);z-index:6000;display:flex;align-items:flex-end;justify-content:center}' +
-      '.sb-sheet{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:92dvh;overflow-y:auto;padding:16px 18px calc(18px + env(safe-area-inset-bottom));font-family:"DM Sans",sans-serif;color:#3d3244}' +
+    // Se abre ARRIBA de la pantalla: así el teclado del celular nunca tapa el texto mientras se corrige.
+    st.textContent = '.sb-bg{position:fixed;inset:0;background:rgba(17,24,39,.6);z-index:6000;display:flex;align-items:flex-start;justify-content:center}' +
+      '.sb-sheet{background:#fff;border-radius:0 0 22px 22px;width:100%;max-width:480px;max-height:100dvh;overflow-y:auto;padding:calc(14px + env(safe-area-inset-top)) 18px 16px;font-family:"DM Sans",sans-serif;color:#3d3244}' +
       '.sb-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sb-t{font-family:"Playfair Display",serif;font-weight:700;color:#0D47A1;font-size:1.05rem}' +
       '.sb-x{border:none;background:#E3F2FD;border-radius:50%;width:30px;height:30px;font-size:1rem;color:#0D47A1}' +
       '.sb-tipos{display:flex;gap:8px;margin-bottom:10px}.sb-tipo{flex:1;padding:10px;border:2px solid #E3F2FD;border-radius:14px;background:#fff;font-weight:700;color:#6b6572;font-family:inherit}' +
@@ -181,7 +182,7 @@
     var bg = document.createElement('div'); bg.className = 'sb-bg'; bg.id = 'sbBug';
     bg.innerHTML = '<div class="sb-sheet" role="dialog" aria-label="Reportar problema"><div class="sb-h"><span class="sb-t">🐞 Reportar problema</span><button class="sb-x" id="sbX" aria-label="Cerrar">✕</button></div>' +
       '<div class="sb-tipos"><button class="sb-tipo on" data-t="ERROR">Algo anda mal</button><button class="sb-tipo" data-t="SUGERENCIA">Sugerencia</button></div>' +
-      '<textarea class="sb-ta" id="sbTxt" maxlength="2000" placeholder="Contá qué pasó o qué te gustaría (sin poner tu PIN)"></textarea>' +
+      '<textarea class="sb-ta" id="sbTxt" maxlength="2000" spellcheck="false" autocorrect="off" autocomplete="off" autocapitalize="sentences" data-gramm="false" placeholder="Contá qué pasó o qué te gustaría (sin poner tu PIN)"></textarea>' +
       '<div class="sb-nota">Se envía junto con la pantalla (' + S.esc(pantalla || '') + '), la versión y el tipo de celular. Nunca se envían tu PIN ni tus datos de acceso.</div>' +
       '<div class="sb-msg" id="sbMsg"></div><button class="sb-btn sb-ok" id="sbEnviar">Enviar</button><button class="sb-btn sb-sec" id="sbCopiar">Copiar texto</button></div>';
     document.body.appendChild(bg);

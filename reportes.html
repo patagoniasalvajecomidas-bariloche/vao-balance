@@ -104,7 +104,7 @@ button { font-family:inherit; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 1;
+window.APP_VERSION = 3;
 const S = window.SEBA, PREFIJO = S.prefijo;
 document.getElementById('btnVolver').href = 'balance.html?p=' + PREFIJO;
 document.getElementById('headerSub').textContent = 'Reportes · ' + PREFIJO + ' · v' + APP_VERSION;
@@ -171,6 +171,8 @@ function render() {
         (porCon[m.concepto] = porCon[m.concepto] || { t: 0, n: 0 }); porCon[m.concepto].t += m.importe; porCon[m.concepto].n++;
     });
     sel.filter(m => m.tipo === 'GASTO' || m.tipo === 'INGRESO').forEach(m => { const c = porCta[m.cuenta] = porCta[m.cuenta] || { g: 0, i: 0 }; if (m.tipo === 'GASTO') c.g += m.importe; else c.i += m.importe; });
+    const porProd = {}; sel.filter(m => m.tipo === 'GASTO' && m.productoId).forEach(m => { const k = m.productoId, d = porProd[k] = porProd[k] || { t: 0, n: 0, nom: String(m.descripcion || '').split(' · ').slice(0, 3).join(' · ') }; d.t += m.importe; d.n++; });
+    const porProdNom = {}; Object.values(porProd).forEach(d => { porProdNom[d.nom] = { t: d.t, n: d.n }; });
     const ingCat = {}; sel.filter(m => m.tipo === 'INGRESO').forEach(m => { (ingCat[m.concepto] = ingCat[m.concepto] || { t: 0, n: 0 }); ingCat[m.concepto].t += m.importe; ingCat[m.concepto].n++; });
     // Detalle por día, boletas agrupadas por MovId
     _grupos = [];
@@ -203,7 +205,7 @@ function render() {
         '<div class="resumen-seleccion"><div class="res-label">Gastos de la selección</div><div class="res-total">' + S.fmt(gas) + '</div>' +
         '<div class="res-fila"><span>Ingresos <b>' + S.fmt(ing) + '</b></span><span>Diferencia <b>' + S.fmt(Math.round((ing - gas) * 100) / 100) + '</b></span></div>' +
         '<div class="res-dias">' + (n === 0 ? 'Ningún día seleccionado' : n === 1 ? '1 día' : n + ' días') + ' · ' + new Set(sel.map(m => m.movId)).size + ' operaciones</div></div>' +
-        barras(porCat, '📂 Gastos por categoría') + barras(porCon, '🏆 Gastos por concepto') + barras(ingCat, '💵 Ingresos por concepto') +
+        barras(porCat, '📂 Gastos por categoría') + barras(porCon, '🏆 Gastos por concepto') + barras(porProdNom, '🛒 Productos más comprados') + barras(ingCat, '💵 Ingresos por concepto') +
         (Object.keys(porCta).length ? '<div class="tarjeta"><div class="tarjeta-titulo">💼 Por cuenta</div>' + Object.entries(porCta).map(([c, v]) => '<div class="metodo-row"><span class="metodo-nombre">' + S.esc(nombreCta(c)) + '</span><span class="metodo-monto"><span style="color:var(--rojo)">−' + S.fmt(v.g) + '</span> · <span style="color:var(--verde)">+' + S.fmt(v.i) + '</span></span></div>').join('') + '</div>' : '') +
         (diasOrd.length ? '<div class="seccion-titulo" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">📋 Detalle por día <label style="text-transform:none;letter-spacing:0;font-weight:500;"><input type="checkbox" ' + (verAnulados ? 'checked' : '') + ' onchange="verAnulados=this.checked;render()"> ver anulados</label></div>' + detalle : '') +
         '</div><div class="pb"></div>';

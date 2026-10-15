@@ -634,6 +634,10 @@ body { overflow-x:hidden; }
             <div id="contenedorClientes"><div class="cargando-clientes">Cargando clientes...</div></div>
         </div>
         <div class="seccion">
+            <div class="seccion-header"><div class="seccion-titulo">🛒 Productos nuevos de clientes</div><button class="btn-primario" onclick="cargarProdClientes()">🔄 Ver</button></div>
+            <div id="contenedorProd" style="font-size:0.85rem;color:var(--gris);">Productos que cargó cada cliente para él solo. Con "Pasar a la lista común" los ven todos (hoja PRODUCTOS).</div>
+        </div>
+        <div class="seccion">
             <div class="seccion-header"><div class="seccion-titulo">🐞 Reportes de problemas</div><button class="btn-primario" onclick="cargarIncidencias()">🔄 Ver</button></div>
             <div id="contenedorInc" style="font-size:0.85rem;color:var(--gris);">Tocá "Ver" para cargar los últimos reportes. Se gestionan en la hoja INCIDENCIAS (columna Estado).</div>
         </div>
@@ -696,7 +700,7 @@ body { overflow-x:hidden; }
 <script src="seba-config.js"></script>
 <script src="seba-comun.js"></script>
 <script>
-window.APP_VERSION = 2;
+window.APP_VERSION = 3;
 const S = window.SEBA;
 document.addEventListener('DOMContentLoaded', function () {
     var tag = document.createElement('span');
@@ -885,6 +889,23 @@ async function cargarIncidencias() {
     if (manejarSesion(res)) return;
     if (res.error) { cont.textContent = res.error; return; }
     cont.innerHTML = res.incidencias.length ? res.incidencias.map(i => '<div class="inc-item"><div class="inc-meta"><b>' + S.esc(i.id) + '</b> · ' + S.esc(i.fecha) + ' · ' + S.esc(i.prefijo) + ' · ' + S.esc(i.tipo) + ' · ' + S.esc(i.pantalla) + ' · <span class="badge ' + (i.estado === 'NUEVO' ? 'badge-pendiente' : 'badge-ok') + '">' + S.esc(i.estado) + '</span></div><div class="inc-desc">' + S.esc(i.descripcion) + '</div></div>').join('') : 'Sin reportes.';
+}
+async function cargarProdClientes() {
+    const cont = document.getElementById('contenedorProd'); cont.textContent = 'Cargando...';
+    const res = await api('getProductosClientes');
+    if (!res) { cont.textContent = 'Error de conexión'; return; }
+    if (manejarSesion(res)) return;
+    if (res.error) { cont.textContent = res.error; return; }
+    cont.innerHTML = res.productos.length ? res.productos.map(p => '<div class="inc-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><div style="min-width:0;"><div class="inc-meta">' + S.esc(p.prefijo) + ' · ' + S.esc(p.lista) + ' › ' + S.esc(p.rubro) + '</div><b>' + S.esc([p.producto, p.marca, p.presentacion].filter(Boolean).join(' · ')) + '</b></div>' +
+        '<button class="btn-accion" style="background:#E8F5E9;color:var(--verde);flex-shrink:0;" onclick="promover(\'' + S.esc(p.prefijo) + '\',\'' + S.esc(p.id) + '\',this)">Pasar a la lista común</button></div>').join('') : 'No hay productos propios para revisar.';
+}
+async function promover(prefijo, id, btn) {
+    btn.disabled = true; btn.textContent = '...';
+    const res = await api('promoverProducto', { prefijo, id });
+    if (!res) { btn.disabled = false; btn.textContent = 'Reintentar'; toast('Sin respuesta: reintentá (no se duplica)', 'rojo'); return; }
+    if (manejarSesion(res)) return;
+    if (res.error) { btn.disabled = false; btn.textContent = 'Pasar a la lista común'; toast('Error: ' + res.error, 'rojo'); return; }
+    toast(res.yaExistia ? 'Ya estaba en la lista común' : '✅ Agregado a la lista común (' + res.id + ')', 'verde'); cargarProdClientes();
 }
 let _toastTimer;
 function toast(msg, tipo) { const el = document.getElementById('toast'); el.textContent = msg; el.className = 'toast visible ' + (tipo || ''); clearTimeout(_toastTimer); _toastTimer = setTimeout(() => el.classList.remove('visible'), 4000); }
